@@ -1,0 +1,536 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Recettes CLV</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="theme-color" content="#025b3b">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Recettes CLV">
+<script>window.API_URL="https://recettes-clv.equipe-clv.workers.dev/";window.VAPID_PUBLIC="BCE-1Ot7AB7aPJFc2Jc8cCHbbTA6kQEMoUwF9MimZOslUbeX-7eZTYCO1I_Y-NWzWiAtNdsj3u89FzG3zcIxIAs";</script>
+<style>
+:root{--vert:#025b3b;--vert2:#0b7a52;--fond:#f3f7f6;--carte:#fff;--txt:#1d2b27;--gris:#6b7c76;--ligne:#dfe8e4;--rouge:#c0392b;--rougef:#fdecea;--orange:#d9822b;--orangef:#fff4e5;--verf:#e6f4ee;--violet:#6a3fa0;--jaune:#fff9db}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--fond);color:var(--txt);font:15px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif}
+a{color:var(--vert2);text-decoration:none}
+button{font:inherit;cursor:pointer;border:0;border-radius:10px;padding:9px 14px;background:var(--vert);color:#fff}
+button.sec{background:#e3ece8;color:var(--vert)}button.dang{background:var(--rougef);color:var(--rouge)}button.lien{background:none;color:var(--vert2);padding:4px 6px}
+button:disabled{opacity:.5}
+input,select,textarea{font:inherit;border:1px solid #cdd9d4;border-radius:9px;padding:8px 10px;background:#fff;color:var(--txt);width:100%}
+textarea{min-height:90px;resize:vertical}
+input:focus,select:focus,textarea:focus{outline:2px solid #9fd3bd;border-color:var(--vert2)}
+label{font-size:12px;color:var(--gris);display:block;margin:0 0 3px}
+#app{display:flex;min-height:100vh}
+nav{background:var(--vert);color:#fff;display:flex}
+nav a{color:#cfe7dc;display:flex;align-items:center;gap:8px;padding:10px 14px;border-radius:10px;position:relative;white-space:nowrap}
+nav a.on{background:rgba(255,255,255,.14);color:#fff}
+nav .ico{font-size:18px;width:22px;text-align:center}
+.badge{background:#ff6b5a;color:#fff;border-radius:10px;font-size:11px;padding:1px 6px;font-weight:600}
+main{flex:1;min-width:0;padding:18px 22px 90px;max-width:1250px;margin:0 auto;width:100%}
+@media (min-width:900px){nav{flex-direction:column;width:215px;padding:16px 10px;gap:4px;position:sticky;top:0;height:100vh}nav .titre{font-weight:700;font-size:18px;padding:6px 12px 16px;color:#fff}}
+@media (max-width:899px){#app{flex-direction:column}nav{position:fixed;bottom:0;left:0;right:0;z-index:20;justify-content:space-around;padding:4px 2px calc(4px + env(safe-area-inset-bottom))}nav .titre{display:none}nav a{flex-direction:column;gap:1px;font-size:10.5px;padding:5px 6px}nav a .badge{position:absolute;top:0;right:2px}main{padding:14px 12px 96px}}
+h1{font-size:22px;margin:4px 0 14px}h2{font-size:16px;margin:0 0 10px}
+.carte{background:var(--carte);border-radius:14px;padding:14px 16px;box-shadow:0 1px 2px rgba(0,0,0,.05);margin-bottom:14px}
+.grille{display:grid;gap:12px}
+.kpis{grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
+.kpi{background:#fff;border-radius:14px;padding:12px 14px;box-shadow:0 1px 2px rgba(0,0,0,.05)}
+.kpi .v{font-size:24px;font-weight:700;color:var(--vert)}.kpi .l{font-size:12px;color:var(--gris)}
+.kpi.rouge .v{color:var(--rouge)}
+.deux{grid-template-columns:1fr}@media (min-width:1000px){.deux{grid-template-columns:1fr 1fr}}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th{font-size:11.5px;color:var(--gris);text-align:left;font-weight:600;padding:6px 6px;border-bottom:1px solid var(--ligne);white-space:nowrap}
+td{padding:7px 6px;border-bottom:1px solid #eef3f1;vertical-align:middle}
+td.n,th.n{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+tr.clic{cursor:pointer}tr.clic:hover{background:#f6faf8}
+.pill{display:inline-block;border-radius:20px;padding:2px 8px;font-size:12px;font-weight:600;white-space:nowrap}
+.p-ok{background:var(--verf);color:#1e7a4c}.p-ko{background:var(--rougef);color:var(--rouge)}.p-warn{background:var(--orangef);color:var(--orange)}.p-m{background:#efe7f8;color:var(--violet)}.p-g{background:#edf1ef;color:var(--gris)}
+.barre{display:flex;align-items:center;gap:8px;margin:5px 0;font-size:13px}
+.barre .nom{width:42%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.barre .piste{flex:1;background:#edf3f0;border-radius:6px;height:14px;position:relative}
+.barre .rem{height:100%;border-radius:6px;background:var(--vert2)}.barre .rem.ko{background:var(--rouge)}
+.barre .cible{position:absolute;top:-3px;bottom:-3px;width:2px;background:#333;opacity:.5}
+.barre .val{width:48px;text-align:right;font-variant-numeric:tabular-nums}
+.outils{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px}.outils input{max-width:320px}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}.chip{background:#fff;border:1px solid var(--ligne);border-radius:20px;padding:5px 11px;font-size:13px;cursor:pointer}.chip.on{background:var(--vert);border-color:var(--vert);color:#fff}
+.groupe{font-weight:700;color:var(--vert);margin:16px 0 4px;font-size:13px;text-transform:uppercase;letter-spacing:.04em}
+.vide{color:var(--gris);padding:14px 0;text-align:center}
+.entete{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap}
+.actions{display:flex;gap:8px;flex-wrap:wrap}
+.form{grid-template-columns:repeat(auto-fit,minmax(170px,1fr))}
+.lignes td{padding:4px 4px}.lignes input{padding:6px 7px}
+.lignes .ing{min-width:180px}
+.etape{display:flex;gap:10px;margin:8px 0}.etape b{background:var(--verf);color:var(--vert);border-radius:50%;width:26px;height:26px;flex:none;display:flex;align-items:center;justify-content:center;font-size:13px}
+.flottant{position:sticky;bottom:70px;z-index:5}@media (min-width:900px){.flottant{bottom:10px}}
+.resume{display:flex;gap:16px;flex-wrap:wrap;background:var(--vert);color:#fff;border-radius:14px;padding:10px 16px;align-items:center}
+.resume div{font-size:12px;opacity:.85}.resume b{display:block;font-size:17px;opacity:1}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.35);display:flex;align-items:flex-end;justify-content:center;z-index:50}
+.modal>div{background:#fff;border-radius:16px 16px 0 0;padding:18px;width:100%;max-width:560px;max-height:90vh;overflow:auto}
+@media (min-width:700px){.modal{align-items:center}.modal>div{border-radius:16px}}
+#toast{position:fixed;left:50%;transform:translateX(-50%);bottom:88px;background:#1d2b27;color:#fff;padding:10px 16px;border-radius:10px;z-index:60;display:none;max-width:90%}
+.login{max-width:330px;margin:12vh auto;text-align:center}.login input{font-size:28px;text-align:center;letter-spacing:12px}
+.petit{font-size:12px;color:var(--gris)}
+.alerte{border-left:4px solid var(--rouge)}.alerte.baisse{border-left-color:#1e7a4c}
+.vert{color:#1e7a4c}.rouge{color:var(--rouge)}.violet{color:var(--violet)}
+@media (max-width:640px){.mc{display:none}.carte{padding:12px}}
+@media print{nav,.actions,.noprint,#toast{display:none!important}main{padding:0;max-width:none}.carte{box-shadow:none;border:1px solid #ddd;break-inside:avoid}body{background:#fff}}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<div id="toast"></div>
+<script>
+// ===================================================================== calcul des coûts (commun serveur + page)
+// Ingrédient : { id, nom, prix (HT pour un conditionnement), cond (qté du conditionnement), unite: 'g'|'ml'|'pièce', rend }
+// Recette    : { id, nom, ingredient (bool : utilisable dans d'autres recettes, au coût HT par gramme),
+//                portions, portionsAuto (bool : portions = poids net ÷ poidsPortion), poidsPortion, prixTTC, tgc, cible,
+//                poidsFinal, lignes: [{ t: 'i'|'r', id, qte, rend }] }
+// Rendement : poids utilisable ÷ poids acheté (0,6 = 60 %). Quantité brute = quantité nette ÷ rendement.
+
+function prixUnite(ing) {
+  if (!ing || ing.prix === null || ing.prix === undefined || ing.prix === '' || !ing.cond) return null;
+  return Number(ing.prix) / Number(ing.cond);
+}
+
+function calculerTout(ingredients, recettes, surcharge) {
+  surcharge = surcharge || {};
+  const ING = {}; for (const i of ingredients) ING[i.id] = i;
+  const REC = {}; for (const r of recettes) REC[r.id] = r;
+  const prixPrepa = {};   // id recette -> coût HT par gramme
+  let res = {};
+  for (let tour = 0; tour < 12; tour++) {
+    let change = false;
+    res = {};
+    for (const r of recettes) {
+      let total = 0, net = 0; const manquants = [], lignes = [];
+      for (const l of (r.lignes || [])) {
+        let nom = '?', unite = '', pu = null, rendBase = 1;
+        if (l.t === 'r') {
+          const sr = REC[l.id];
+          if (sr) { nom = sr.nom; unite = 'g'; pu = (sr.ingredient && sr.id !== r.id) ? (prixPrepa[sr.id] ?? null) : null; }
+        } else {
+          const ing = ING[l.id];
+          if (ing) { nom = ing.nom; unite = ing.unite; pu = (l.id in surcharge) ? surcharge[l.id] : prixUnite(ing); rendBase = Number(ing.rend) || 1; }
+        }
+        const q = (l.qte === null || l.qte === undefined || l.qte === '') ? null : Number(l.qte);
+        const rend = Number(l.rend) || rendBase || 1;
+        let brut = null, cout = null;
+        if (q !== null && !isNaN(q)) {
+          net += q; brut = q / rend;
+          if (pu !== null) { cout = brut * pu; total += cout; }
+        }
+        if (pu === null || q === null) manquants.push(nom + (q === null ? ' (quantité)' : ''));
+        lignes.push({ nom: nom, unite: unite, pu: pu, rendBase: rendBase, rend: rend, qte: q, brut: brut, cout: cout, t: l.t, id: l.id });
+      }
+      const poids = Number(r.poidsFinal) || net;
+      const cg = poids ? total / poids : null;
+      let portions = Number(r.portions) || 1;
+      if (r.portionsAuto && Number(r.poidsPortion)) portions = Math.max(1, Math.floor(net / Number(r.poidsPortion)));
+      const tgc = (r.tgc === null || r.tgc === undefined || r.tgc === '') ? 0.06 : Number(r.tgc);
+      const cible = Number(r.cible) || 0.3;
+      const cp = total / portions;
+      const ht = Number(r.prixTTC) ? Number(r.prixTTC) / (1 + tgc) : null;
+      const fc = ht ? cp / ht : null;
+      res[r.id] = { total: total, net: net, poids: poids, cg: cg, portions: portions, cp: cp, ht: ht, fc: fc, cible: cible,
+                    marge: ht ? ht - cp : null, coef: (ht && cp) ? ht / cp : null, conseil: cp / cible * (1 + tgc),
+                    manquants: manquants, lignes: lignes };
+      if (r.ingredient && cg !== null) {
+        if (prixPrepa[r.id] === undefined || Math.abs(prixPrepa[r.id] - cg) > 1e-9) { prixPrepa[r.id] = cg; change = true; }
+      }
+    }
+    if (!change) break;
+  }
+  return { res: res, prixPrepa: prixPrepa };
+}
+
+// recettes qui utilisent un ingrédient (directement ou à travers une sauce maison)
+function recettesUtilisant(recettes, t, id) {
+  const out = new Set(); let cibles = [[t, id]];
+  for (let n = 0; n < 12 && cibles.length; n++) {
+    const suiv = [];
+    for (const r of recettes) {
+      if (out.has(r.id)) continue;
+      if ((r.lignes || []).some(l => cibles.some(c => c[0] === l.t && c[1] === l.id))) { out.add(r.id); if (r.ingredient) suiv.push(['r', r.id]); }
+    }
+    cibles = suiv;
+  }
+  return [...out];
+}
+
+const APP_VERSION = "1.0";
+const API = window.API_URL || 'http://localhost:8787/';
+let TOKEN = localStorage.getItem('rclv_token') || '';
+let D = null, C = null, PREPA = {};
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const nf = (x, d = 0) => (x === null || x === undefined || isNaN(x)) ? '–' : Number(x).toLocaleString('fr-FR', { minimumFractionDigits: d, maximumFractionDigits: d });
+const F = x => (x === null || x === undefined || isNaN(x)) ? '–' : nf(x) + ' F';
+const P = (x, d = 0) => (x === null || x === undefined || isNaN(x)) ? '–' : nf(x * 100, d) + ' %';
+const norm = s => String(s || '').replace(/œ/g, 'oe').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+function toast(m, ms = 2600) { const t = $('#toast'); t.textContent = m; t.style.display = 'block'; clearTimeout(t._h); t._h = setTimeout(() => t.style.display = 'none', ms); }
+
+async function api(action, data) {
+  const r = await fetch(API, { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify({ action, token: TOKEN, data }) });
+  const j = await r.json();
+  if (!j.ok) { if (j.erreur === 'SESSION') { TOKEN = ''; localStorage.removeItem('rclv_token'); rendre(); throw new Error('Session expirée'); } throw new Error(j.erreur); }
+  return j.r;
+}
+async function charger() {
+  D = await api('etat');
+  try { localStorage.setItem('rclv_cache', JSON.stringify(D)); } catch (e) {}
+  recalculer();
+}
+function recalculer() { const x = calculerTout(D.ingredients, D.recettes); C = x.res; PREPA = x.prixPrepa; }
+const ING = id => D.ingredients.find(i => i.id === id);
+const REC = id => D.recettes.find(r => r.id === id);
+function uniteLabel(i) { return i.unite === 'pièce' ? 'pièce' : (i.unite === 'ml' ? 'L' : 'kg'); }
+function prixAff(i) { const pu = prixUnite(i); if (pu === null) return null; return i.unite === 'pièce' ? pu : pu * 1000; }
+function fcPill(fc, cible) { if (fc === null || fc === undefined) return '<span class="pill p-g">non vendu</span>'; const c = fc > cible ? 'p-ko' : (fc > cible - 0.03 ? 'p-warn' : 'p-ok'); return `<span class="pill ${c}">${P(fc, 1)}</span>`; }
+function varPill(v) { if (v === null || v === undefined) return ''; if (Math.abs(v) < 0.005) return '<span class="pill p-g">=</span>'; return `<span class="pill ${v > 0 ? 'p-ko' : 'p-ok'}">${v > 0 ? '+' : '−'}${nf(Math.abs(v) * 100, 0)} %</span>`; }
+const vendues = () => D.recettes.filter(r => Number(r.prixTTC));
+const dossiers = () => [...new Set(D.recettes.map(r => r.dossier || 'Sans dossier'))].sort((a, b) => a.localeCompare(b, 'fr'));
+
+// ------------------------------------------------------------------ rendu / navigation
+const PAGES = [['#/', '📊', 'Tableau de bord'], ['#/recettes', '📖', 'Recettes'], ['#/ingredients', '🥕', 'Ingrédients'], ['#/alertes', '🔔', 'Alertes'], ['#/reglages', '⚙️', 'Réglages']];
+function rendre() {
+  const root = $('#root');
+  if (!TOKEN) { root.innerHTML = pageLogin(); $('#code').focus(); return; }
+  if (!D) { const c = localStorage.getItem('rclv_cache'); if (c) { try { D = JSON.parse(c); recalculer(); } catch (e) {} } }
+  if (!D) { root.innerHTML = '<div class="vide" style="margin-top:30vh">Chargement…</div>'; charger().then(rendre).catch(e => toast(e.message)); return; }
+  const h = location.hash || '#/';
+  const base = '#/' + (h.split('/')[1] || '');
+  const nav = '<nav><div class="titre">🍳 Recettes CLV</div>' + PAGES.map(([u, i, l]) => {
+    const on = (u === base || (u === '#/recettes' && (base === '#/r' || base === '#/edit')) || (u === '#/ingredients' && base === '#/i'));
+    const b = (u === '#/alertes' && D.nonLues) ? ` <span class="badge">${D.nonLues}</span>` : '';
+    return `<a href="${u}" class="${on ? 'on' : ''}"><span class="ico">${i}</span><span>${l}</span>${b}</a>`;
+  }).join('') + '</nav>';
+  let html = '';
+  try {
+    const p = h.split('/');
+    if (base === '#/') html = pageDashboard();
+    else if (base === '#/recettes') html = pageRecettes();
+    else if (base === '#/r') html = pageFiche(decodeURIComponent(p[2]));
+    else if (base === '#/edit') html = pageEdition(decodeURIComponent(p[2] || 'nouvelle'), p[3]);
+    else if (base === '#/ingredients') html = pageIngredients();
+    else if (base === '#/alertes') html = pageAlertes();
+    else if (base === '#/reglages') html = pageReglages();
+    else html = pageDashboard();
+  } catch (e) { html = '<div class="carte rouge">Erreur : ' + esc(e.message) + '</div>'; console.error(e); }
+  root.innerHTML = '<div id="app">' + nav + '<main>' + html + '</main></div>';
+  if (base === '#/edit') initEdition();
+  if (base === '#/recettes' || base === '#/ingredients') { const s = $('#cherche'); if (s && ETAT.focus) { s.focus(); s.setSelectionRange(s.value.length, s.value.length); } }
+  if (base === '#/alertes' && D.nonLues) { api('alertesLues').then(() => { D.nonLues = 0; for (const a of D.alertes) a.lue = true; }).catch(() => {}); }
+}
+window.addEventListener('hashchange', () => { window.scrollTo(0, 0); rendre(); });
+const ETAT = { q: '', dossier: '', type: '', qi: '', fi: '', focus: false };
+
+// ------------------------------------------------------------------ connexion
+function pageLogin() {
+  return `<div class="login carte"><h1>🍳 Recettes CLV</h1><p class="petit">Coûts des recettes, sauces maison et prix des fournisseurs</p>
+  <input id="code" type="password" inputmode="numeric" maxlength="8" placeholder="••••" onkeydown="if(event.key==='Enter')login()">
+  <p><button onclick="login()" style="width:100%">Entrer</button></p></div>`;
+}
+async function login() {
+  try {
+    const res = await fetch(API, { method: 'POST', body: JSON.stringify({ action: 'login', code: $('#code').value }) }).then(r => r.json());
+    if (!res.ok) throw new Error(res.erreur);
+    TOKEN = res.r.token; localStorage.setItem('rclv_token', TOKEN); D = null; rendre();
+  } catch (e) { toast(e.message); $('#code').value = ''; }
+}
+
+// ------------------------------------------------------------------ tableau de bord
+function pageDashboard() {
+  const v = vendues().map(r => ({ r, c: C[r.id] })).filter(x => x.c);
+  const fcs = v.map(x => x.c.fc).filter(x => x !== null);
+  const moy = fcs.length ? fcs.reduce((a, b) => a + b, 0) / fcs.length : null;
+  const ko = v.filter(x => x.c.fc > x.c.cible).sort((a, b) => b.c.fc - a.c.fc);
+  const incompletes = D.recettes.filter(r => C[r.id] && C[r.id].manquants.length);
+  const sansPrix = D.ingredients.filter(i => prixUnite(i) === null && D.recettes.some(r => (r.lignes || []).some(l => l.t === 'i' && l.id === i.id)));
+  const facture = D.ingredients.filter(i => i.source === 'facture').length;
+  const preps = D.recettes.filter(r => r.ingredient).length;
+  const al = D.alertes.slice().reverse().slice(0, 8);
+  const barres = v.filter(x => x.c.fc !== null).sort((a, b) => b.c.fc - a.c.fc).map(x => {
+    const w = Math.min(100, x.c.fc / 0.6 * 100), c = Math.min(100, x.c.cible / 0.6 * 100);
+    return `<div class="barre clic" onclick="location.hash='#/r/${x.r.id}'"><span class="nom">${esc(x.r.nom)}</span><span class="piste"><span class="rem ${x.c.fc > x.c.cible ? 'ko' : ''}" style="width:${w}%;display:block"></span><span class="cible" style="left:${c}%"></span></span><span class="val">${P(x.c.fc)}</span></div>`;
+  }).join('') || '<div class="vide">Aucune recette avec un prix de vente.</div>';
+  return `<div class="entete"><h1>Tableau de bord</h1><div class="actions"><button onclick="location.hash='#/edit/nouvelle'">+ Nouvelle recette</button></div></div>
+  <div class="grille kpis">
+    <div class="kpi"><div class="v">${D.recettes.length}</div><div class="l">recettes (${preps} sauces / préparations)</div></div>
+    <div class="kpi"><div class="v">${P(moy, 1)}</div><div class="l">food cost moyen (${v.length} vendues)</div></div>
+    <div class="kpi ${ko.length ? 'rouge' : ''}"><div class="v">${ko.length}</div><div class="l">au-dessus de la cible</div></div>
+    <div class="kpi"><div class="v">${facture}</div><div class="l">prix suivis par facture</div></div>
+    <div class="kpi ${incompletes.length ? 'rouge' : ''}"><div class="v">${incompletes.length}</div><div class="l">recettes à compléter</div></div>
+  </div><div style="height:14px"></div>
+  <div class="grille deux">
+    <div class="carte"><h2>Food cost des recettes vendues</h2><div class="petit" style="margin-bottom:6px">Trait noir = cible. Rouge = au-dessus.</div>${barres}</div>
+    <div>
+      <div class="carte"><h2>À surveiller</h2>${ko.length ? `<table><tr><th>Recette</th><th class="n">Coût</th><th class="n">Prix TTC</th><th class="n">FC</th><th class="n">Prix conseillé</th></tr>${ko.map(x => `<tr class="clic" onclick="location.hash='#/r/${x.r.id}'"><td>${esc(x.r.nom)}</td><td class="n">${F(x.c.cp)}</td><td class="n">${F(x.r.prixTTC)}</td><td class="n">${fcPill(x.c.fc, x.c.cible)}</td><td class="n">${F(x.c.conseil)}</td></tr>`).join('')}</table>` : '<div class="vide">Tout est sous la cible 👍</div>'}</div>
+      <div class="carte"><h2>Dernières variations de prix</h2>${al.length ? al.map(a => `<div style="margin:6px 0"><b>${esc(a.ingredient)}</b> ${varPill(a.variation)} <span class="petit">${F(a.ancien)} → ${F(a.nouveau)}/${a.unite} · ${esc(a.fournisseur || '')} ${esc((a.date || '').split('-').reverse().join('/'))}</span>${a.impact.length ? `<div class="petit">↳ ${a.impact.slice(0, 3).map(i => esc(i.nom)).join(', ')}${a.impact.length > 3 ? '…' : ''}</div>` : ''}</div>`).join('') + '<a href="#/alertes" class="petit">Toutes les alertes →</a>' : '<div class="vide">Aucune alerte pour l\'instant.</div>'}
+      <div class="petit">Prix des factures mis à jour : ${esc(D.majPrix || 'pas encore')}</div></div>
+    </div>
+  </div>
+  <div class="grille deux">
+    <div class="carte"><h2>Recettes à compléter</h2>${incompletes.length ? `<table>${incompletes.slice(0, 25).map(r => `<tr class="clic" onclick="location.hash='#/r/${r.id}'"><td>${esc(r.nom)}</td><td class="petit">${esc(C[r.id].manquants.join(', '))}</td></tr>`).join('')}</table>` : '<div class="vide">Rien à compléter.</div>'}</div>
+    <div class="carte"><h2>Ingrédients utilisés sans prix</h2>${sansPrix.length ? `<table>${sansPrix.map(i => `<tr class="clic" onclick="ouvrirIngredient('${i.id}')"><td>${esc(i.nom)}</td><td class="petit">${recettesUtilisant(D.recettes, 'i', i.id).length} recette(s)</td><td class="n"><button class="lien">Saisir le prix</button></td></tr>`).join('')}</table>` : '<div class="vide">Tous les ingrédients utilisés ont un prix.</div>'}</div>
+  </div>`;
+}
+
+// ------------------------------------------------------------------ liste des recettes
+function pageRecettes() {
+  const q = norm(ETAT.q);
+  let l = D.recettes.filter(r => (!q || norm(r.nom + ' ' + (r.dossier || '')).includes(q)) && (!ETAT.dossier || (r.dossier || 'Sans dossier') === ETAT.dossier)
+    && (!ETAT.type || (ETAT.type === 'prep' ? r.ingredient : (ETAT.type === 'vente' ? Number(r.prixTTC) : (ETAT.type === 'ko' ? (C[r.id] && C[r.id].fc > C[r.id].cible) : C[r.id] && C[r.id].manquants.length)))));
+  const g = {}; for (const r of l) (g[r.dossier || 'Sans dossier'] = g[r.dossier || 'Sans dossier'] || []).push(r);
+  const chips = ['', ...dossiers()].map(d => `<span class="chip ${ETAT.dossier === d ? 'on' : ''}" onclick="ETAT.dossier='${esc(d)}';rendre()">${d ? esc(d) : 'Tous'}</span>`).join('');
+  const types = [['', 'Toutes'], ['vente', 'Vendues'], ['prep', 'Sauces / préparations'], ['ko', 'Au-dessus de la cible'], ['inc', 'À compléter']].map(([k, t]) => `<span class="chip ${ETAT.type === k ? 'on' : ''}" onclick="ETAT.type='${k}';rendre()">${t}</span>`).join('');
+  const corps = Object.keys(g).sort((a, b) => a.localeCompare(b, 'fr')).map(d => `<div class="groupe">${esc(d)}</div><div class="carte" style="padding:6px 10px"><table>
+    <tr><th>Recette</th><th class="n mc">Coût total</th><th class="n">Coût / portion</th><th class="n mc">Coût / g</th><th class="n">Prix TTC</th><th class="n">Food cost</th></tr>
+    ${g[d].sort((a, b) => a.nom.localeCompare(b.nom, 'fr')).map(r => { const c = C[r.id] || {}; return `<tr class="clic" onclick="location.hash='#/r/${r.id}'"><td>${esc(r.nom)} ${r.ingredient ? '<span class="pill p-m">ingrédient</span>' : ''} ${c.manquants && c.manquants.length ? '<span class="pill p-warn">incomplet</span>' : ''}</td><td class="n mc">${F(c.total)}</td><td class="n">${F(c.cp)}</td><td class="n mc">${c.cg !== null ? nf(c.cg, 2) + ' F' : '–'}</td><td class="n">${Number(r.prixTTC) ? F(r.prixTTC) : '–'}</td><td class="n">${Number(r.prixTTC) ? fcPill(c.fc, c.cible) : ''}</td></tr>`; }).join('')}</table></div>`).join('');
+  return `<div class="entete"><h1>Recettes</h1><div class="actions"><button onclick="location.hash='#/edit/nouvelle'">+ Nouvelle recette</button><button class="sec" onclick="exporterCSV()">Exporter (Excel)</button></div></div>
+  <div class="outils"><input id="cherche" placeholder="Rechercher une recette…" value="${esc(ETAT.q)}" oninput="ETAT.q=this.value;ETAT.focus=true;rendre()"></div>
+  <div class="chips">${types}</div><div class="chips">${chips}</div>${corps || '<div class="vide">Aucune recette.</div>'}`;
+}
+
+// ------------------------------------------------------------------ fiche
+function pageFiche(id) {
+  const r = REC(id); if (!r) return '<div class="vide">Recette introuvable.</div>';
+  const c = C[r.id];
+  const utilisee = r.ingredient ? D.recettes.filter(o => (o.lignes || []).some(l => l.t === 'r' && l.id === r.id)) : [];
+  const etapes = String(r.etapes || '').split('\n').map(s => s.replace(/^\s*\d+[.)]\s*/, '').trim()).filter(Boolean);
+  const lignes = c.lignes.map(l => {
+    const lien = l.t === 'r' ? `<a href="#/r/${l.id}">${esc(l.nom)}</a> <span class="pill p-m">maison</span>` : `<a onclick="ouvrirIngredient('${l.id}')" style="cursor:pointer">${esc(l.nom)}</a>`;
+    const pu = l.pu === null ? '<span class="pill p-ko">sans prix</span>' : (l.unite === 'pièce' ? F(l.pu) + '/pièce' : nf(l.pu * 1000) + ' F/' + (l.unite === 'ml' ? 'L' : 'kg'));
+    return `<tr><td>${lien}</td><td class="n">${l.qte === null ? '<span class="pill p-warn">?</span>' : nf(l.qte, 2) + ' ' + esc(l.unite)}</td><td class="n petit">${pu}</td><td class="n mc">${l.rend !== 1 ? P(l.rend) : ''}</td><td class="n mc">${l.brut !== null && l.rend !== 1 ? nf(l.brut, 1) : ''}</td><td class="n">${l.cout === null ? '–' : nf(l.cout, 1)}</td><td class="n petit mc">${l.cout && c.total ? P(l.cout / c.total) : ''}</td></tr>`;
+  }).join('');
+  return `<div class="entete"><div><div class="petit"><a href="#/recettes">Recettes</a> › ${esc(r.dossier || 'Sans dossier')}</div><h1>${esc(r.nom)} ${r.ingredient ? '<span class="pill p-m">utilisable comme ingrédient</span>' : ''}</h1></div>
+  <div class="actions"><button onclick="location.hash='#/edit/${r.id}'">Modifier</button><button class="sec" onclick="location.hash='#/edit/nouvelle/${r.id}'">Dupliquer</button><button class="sec" onclick="print()">Imprimer</button><button class="dang" onclick="supprimerRecette('${r.id}')">Supprimer</button></div></div>
+  <div class="grille kpis">
+    <div class="kpi"><div class="v">${F(c.total)}</div><div class="l">coût total HT</div></div>
+    <div class="kpi"><div class="v">${F(c.cp)}</div><div class="l">coût / portion (${nf(c.portions, 1)} portion${c.portions > 1 ? 's' : ''})</div></div>
+    ${Number(r.prixTTC) ? `<div class="kpi ${c.fc > c.cible ? 'rouge' : ''}"><div class="v">${P(c.fc, 1)}</div><div class="l">food cost (cible ${P(c.cible)}) · prix ${F(r.prixTTC)} TTC</div></div>
+    <div class="kpi"><div class="v">${F(c.conseil)}</div><div class="l">prix TTC conseillé pour la cible</div></div>
+    <div class="kpi"><div class="v">${F(c.marge)}</div><div class="l">marge brute / portion HT (×${nf(c.coef, 2)})</div></div>` : ''}
+    <div class="kpi"><div class="v violet">${c.cg !== null ? nf(c.cg, 3) + ' F' : '–'}</div><div class="l">coût HT / gramme${r.poidsFinal ? ' (poids final ' + nf(r.poidsFinal) + ' g)' : ' (poids net ' + nf(c.net) + ' g)'}</div></div>
+  </div><div style="height:14px"></div>
+  ${c.manquants.length ? `<div class="carte" style="background:var(--orangef)">⚠️ Coût incomplet : ${esc(c.manquants.join(', '))}</div>` : ''}
+  <div class="carte"><h2>Ingrédients</h2><table><tr><th>Ingrédient</th><th class="n">Quantité nette</th><th class="n">Prix HT</th><th class="n mc">Rendement</th><th class="n mc">Qté brute</th><th class="n">Coût HT</th><th class="n mc">Part</th></tr>${lignes}
+  <tr><td><b>Total</b></td><td class="n"><b>${nf(c.net)}</b></td><td></td><td class="mc"></td><td class="mc"></td><td class="n"><b>${F(c.total)}</b></td><td class="mc"></td></tr></table></div>
+  <div class="grille deux"><div class="carte"><h2>Réalisation</h2>${etapes.length ? etapes.map((e, i) => `<div class="etape"><b>${i + 1}</b><div>${esc(e)}</div></div>`).join('') : '<div class="vide">Pas encore d\'instructions.</div>'}</div>
+  <div class="carte"><h2>Infos</h2><table>${[['Temps de prépa', r.prepa], ['Cuisson', r.cuisson], ['Poids d\'une portion', r.poidsPortion ? nf(r.poidsPortion) + ' g' : ''], ['TGC', r.tgc !== undefined && r.tgc !== null ? P(r.tgc) : ''], ['Conservation / DLC', r.conservation], ['Allergènes', r.allergenes], ['Dressage / notes', r.notes], ['Modifiée le', r.maj]].filter(x => x[1]).map(x => `<tr><td class="petit">${x[0]}</td><td>${esc(x[1])}</td></tr>`).join('')}</table>
+  ${utilisee.length ? `<h2 style="margin-top:14px">Utilisée dans</h2>${utilisee.map(o => `<a href="#/r/${o.id}">${esc(o.nom)}</a>`).join(' · ')}` : ''}</div></div>`;
+}
+async function supprimerRecette(id) {
+  const r = REC(id); if (!confirm('Supprimer définitivement « ' + r.nom + ' » ?')) return;
+  try { await api('supprimerRecette', { id }); D.recettes = D.recettes.filter(x => x.id !== id); recalculer(); location.hash = '#/recettes'; toast('Recette supprimée'); } catch (e) { toast(e.message); }
+}
+
+// ------------------------------------------------------------------ édition
+let BROUILLON = null;
+function choix() { // nom affiché -> {t,id}
+  const m = {};
+  for (const i of D.ingredients) m[i.nom] = { t: 'i', id: i.id };
+  for (const r of D.recettes) if (r.ingredient && (!BROUILLON || r.id !== BROUILLON.id)) m[r.nom] = { t: 'r', id: r.id };
+  return m;
+}
+function nomLigne(l) { if (!l.id) return l.nom || ''; const o = l.t === 'r' ? REC(l.id) : ING(l.id); return o ? o.nom : (l.nom || ''); }
+function pageEdition(id, depuis) {
+  if (id === 'nouvelle') {
+    const src = depuis ? REC(depuis) : null;
+    BROUILLON = src ? JSON.parse(JSON.stringify(src)) : { nom: '', dossier: ETAT.dossier || '', ingredient: false, portions: 1, tgc: 0.06, cible: 0.3, lignes: [], etapes: '' };
+    if (src) { delete BROUILLON.id; BROUILLON.nom = src.nom + ' (copie)'; }
+  } else BROUILLON = JSON.parse(JSON.stringify(REC(id)));
+  const b = BROUILLON; if (!b.lignes.length) b.lignes.push({ t: 'i', id: '', qte: '' });
+  const ch = choix();
+  const dl = Object.keys(ch).sort((a, c) => a.localeCompare(c, 'fr')).map(n => `<option value="${esc(n)}">`).join('');
+  const dd = dossiers().map(d => `<option value="${esc(d)}">`).join('');
+  const champ = (k, l, t = 'text', extra = '') => `<div><label>${l}</label><input data-k="${k}" type="${t}" value="${esc(b[k] ?? '')}" ${extra}></div>`;
+  return `<div class="entete"><div><div class="petit"><a href="#/recettes">Recettes</a></div><h1>${b.id ? 'Modifier' : 'Nouvelle recette'}</h1></div>
+  <div class="actions"><button onclick="enregistrer()">Enregistrer</button><button class="sec" onclick="history.back()">Annuler</button></div></div>
+  <datalist id="dl-ing">${dl}</datalist><datalist id="dl-dos">${dd}</datalist>
+  <div class="carte"><div class="grille form">
+    <div style="grid-column:1/-1"><label>Nom de la recette</label><input data-k="nom" value="${esc(b.nom)}" style="font-size:18px;font-weight:600"></div>
+    ${champ('dossier', 'Dossier / catégorie', 'text', 'list="dl-dos" placeholder="Sauces, Barista, Salé…"')}
+    <div><label>Utiliser comme ingrédient (sauce, base…)</label><select data-k="ingredient"><option value="">Non</option><option value="1" ${b.ingredient ? 'selected' : ''}>Oui — au coût HT par gramme</option></select></div>
+    ${champ('prixTTC', 'Prix de vente TTC (vide si pas vendu)', 'number', 'inputmode="decimal"')}
+    <div><label>TGC</label><select data-k="tgc">${[0, 0.03, 0.06, 0.11, 0.22].map(t => `<option value="${t}" ${Number(b.tgc ?? 0.06) === t ? 'selected' : ''}>${t * 100} %</option>`).join('')}</select></div>
+    <div><label>Food cost cible</label><input data-k="cibleP" type="number" value="${Math.round((b.cible || 0.3) * 100)}" inputmode="decimal"></div>
+    <div><label>Portions</label><select data-k="portionsAuto"><option value="">Nombre fixe</option><option value="1" ${b.portionsAuto ? 'selected' : ''}>Calculé : poids ÷ poids d'une portion</option></select></div>
+    ${champ('portions', 'Nombre de portions', 'number', 'inputmode="decimal"')}
+    ${champ('poidsPortion', 'Poids d\'une portion (g)', 'number', 'inputmode="decimal"')}
+    ${champ('poidsFinal', 'Poids final après cuisson (g, facultatif)', 'number', 'inputmode="decimal"')}
+    ${champ('prepa', 'Temps de prépa')}${champ('cuisson', 'Cuisson (temps / T°)')}
+  </div></div>
+  <div class="carte"><h2>Ingrédients <span class="petit">— quantité NETTE (ce qui va dans la recette), dans l'unité affichée</span></h2>
+  <div style="overflow-x:auto"><table class="lignes" id="lignes"></table></div>
+  <p><button class="sec" onclick="ajouterLigne()">+ Ajouter un ingrédient</button></p>
+  <div class="petit">Rendement perso : pour forcer un rendement dans CETTE recette (0,6 = 60 %). Vide = celui de l'ingrédient.</div></div>
+  <div class="carte"><h2>Instructions de réalisation <span class="petit">— une étape par ligne</span></h2><textarea data-k="etapes" style="min-height:160px">${esc(Array.isArray(b.etapes) ? b.etapes.join('\n') : (b.etapes || ''))}</textarea></div>
+  <div class="carte"><div class="grille form">${champ('conservation', 'Conservation / DLC')}${champ('allergenes', 'Allergènes')}<div style="grid-column:1/-1"><label>Dressage / notes</label><textarea data-k="notes" style="min-height:60px">${esc(b.notes || '')}</textarea></div></div></div>
+  <div class="flottant"><div class="resume" id="resume"></div></div>`;
+}
+function initEdition() {
+  for (const el of document.querySelectorAll('[data-k]')) el.addEventListener('input', () => { lireChamps(); majResume(); });
+  dessinerLignes();
+}
+function lireChamps() {
+  const b = BROUILLON;
+  for (const el of document.querySelectorAll('[data-k]')) {
+    const k = el.dataset.k, v = el.value;
+    if (k === 'ingredient' || k === 'portionsAuto') b[k] = !!v;
+    else if (k === 'cibleP') b.cible = v === '' ? 0.3 : Number(v) / 100;
+    else if (['prixTTC', 'portions', 'poidsPortion', 'poidsFinal', 'tgc'].includes(k)) b[k] = v === '' ? null : Number(v);
+    else b[k] = v;
+  }
+}
+function dessinerLignes() {
+  const ch = choix();
+  $('#lignes').innerHTML = '<tr><th>Ingrédient</th><th class="n">Quantité</th><th>Unité</th><th class="n">Prix HT</th><th class="n">Rend. base</th><th class="n">Rend. perso</th><th class="n">Coût</th><th></th></tr>' +
+    BROUILLON.lignes.map((l, k) => `<tr><td><input class="ing" list="dl-ing" value="${esc(nomLigne(l))}" onchange="choisir(${k},this.value)" placeholder="Tapez pour chercher…"></td>
+    <td><input type="number" inputmode="decimal" style="width:90px" value="${l.qte ?? ''}" oninput="BROUILLON.lignes[${k}].qte=this.value===''?null:Number(this.value);majResume()"></td>
+    <td class="petit" id="u${k}"></td><td class="n petit" id="p${k}"></td><td class="n petit" id="rb${k}"></td>
+    <td><input type="number" inputmode="decimal" step="0.05" style="width:70px" value="${l.rend ?? ''}" placeholder="—" oninput="BROUILLON.lignes[${k}].rend=this.value===''?null:Number(this.value);majResume()"></td>
+    <td class="n" id="c${k}"></td><td><button class="lien" onclick="BROUILLON.lignes.splice(${k},1);dessinerLignes()">✕</button></td></tr>`).join('');
+  majResume();
+}
+function choisir(k, v) {
+  const ch = choix(), m = ch[v] || ch[Object.keys(ch).find(n => norm(n) === norm(v))];
+  const l = BROUILLON.lignes[k];
+  if (m) { l.t = m.t; l.id = m.id; delete l.nom; dessinerLignes(); const q = document.querySelectorAll('#lignes input[type=number]')[k * 2]; if (q) q.focus(); return; }
+  if (!v.trim()) { l.id = ''; dessinerLignes(); return; }
+  l.id = ''; l.nom = v;
+  if (confirm('« ' + v + ' » n\'existe pas encore. Le créer comme nouvel ingrédient ?')) ouvrirIngredient(null, v, k);
+  else dessinerLignes();
+}
+function ajouterLigne() { BROUILLON.lignes.push({ t: 'i', id: '', qte: null }); dessinerLignes(); const x = document.querySelectorAll('#lignes .ing'); x[x.length - 1].focus(); }
+function majResume() {
+  const b = BROUILLON, tmp = Object.assign({}, b, { id: b.id || '__brouillon', lignes: b.lignes.filter(l => l.id) });
+  const autres = D.recettes.filter(r => r.id !== tmp.id);
+  const c = calculerTout(D.ingredients, autres.concat([tmp])).res[tmp.id];
+  let j = 0;
+  b.lignes.forEach((l, k) => {
+    const x = l.id ? c.lignes[j++] : null;
+    const set = (id, h) => { const e = document.getElementById(id + k); if (e) e.innerHTML = h; };
+    set('u', x ? esc(x.unite) : (l.nom ? '<span class="pill p-ko">inconnu</span>' : ''));
+    set('p', x ? (x.pu === null ? '<span class="pill p-ko">sans prix</span>' : (x.unite === 'pièce' ? nf(x.pu, 1) + '/pc' : nf(x.pu * 1000) + '/' + (x.unite === 'ml' ? 'L' : 'kg'))) : '');
+    set('rb', x ? P(x.rendBase) : ''); set('c', x && x.cout !== null ? nf(x.cout, 1) : '');
+  });
+  $('#resume').innerHTML = `<div>Coût total<b>${F(c.total)}</b></div><div>Par portion<b>${F(c.cp)}</b></div><div>Coût / g<b>${c.cg !== null ? nf(c.cg, 3) + ' F' : '–'}</b></div>` +
+    (Number(b.prixTTC) ? `<div>Food cost<b>${P(c.fc, 1)}</b></div>` : '') + `<div>Prix TTC conseillé<b>${F(c.conseil)}</b></div>` + (c.manquants.length ? `<div>⚠️ incomplet<b>${c.manquants.length}</b></div>` : '');
+}
+async function enregistrer() {
+  lireChamps();
+  const b = BROUILLON;
+  if (!String(b.nom || '').trim()) return toast('Donnez un nom à la recette');
+  if (b.lignes.some(l => !l.id && l.nom)) return toast('Un ingrédient n\'est pas reconnu : choisissez-le dans la liste');
+  const r = Object.assign({}, b, { lignes: b.lignes.filter(l => l.id) });
+  try {
+    const res = await api('saveRecette', { recette: r });
+    const k = D.recettes.findIndex(x => x.id === res.recette.id);
+    if (k < 0) D.recettes.push(res.recette); else D.recettes[k] = res.recette;
+    recalculer(); toast('Recette enregistrée'); location.hash = '#/r/' + res.recette.id;
+  } catch (e) { toast(e.message, 4000); }
+}
+
+// ------------------------------------------------------------------ ingrédients
+function pageIngredients() {
+  const q = norm(ETAT.qi);
+  const util = {}; for (const r of D.recettes) for (const l of r.lignes || []) if (l.t === 'i') util[l.id] = (util[l.id] || 0) + 1;
+  let l = D.ingredients.filter(i => (!q || norm(i.nom + ' ' + (i.fournisseur || '') + ' ' + (i.categorie || '')).includes(q))
+    && (!ETAT.fi || (ETAT.fi === 'facture' ? i.source === 'facture' : ETAT.fi === 'sans' ? prixUnite(i) === null : ETAT.fi === 'var' ? Math.abs(i.variation || 0) >= (D.seuil || 0.05) : ETAT.fi === 'util' ? util[i.id] : true)));
+  l.sort((a, b) => a.nom.localeCompare(b.nom, 'fr'));
+  const preps = D.recettes.filter(r => r.ingredient && (!q || norm(r.nom).includes(q)));
+  const f = [['', 'Tous'], ['util', 'Utilisés dans une recette'], ['facture', 'Prix des factures'], ['var', 'Prix qui ont bougé'], ['sans', 'Sans prix']].map(([k, t]) => `<span class="chip ${ETAT.fi === k ? 'on' : ''}" onclick="ETAT.fi='${k}';rendre()">${t}</span>`).join('');
+  return `<div class="entete"><h1>Ingrédients</h1><div class="actions"><button onclick="ouvrirIngredient(null)">+ Nouvel ingrédient</button></div></div>
+  <div class="outils"><input id="cherche" placeholder="Rechercher (nom, fournisseur)…" value="${esc(ETAT.qi)}" oninput="ETAT.qi=this.value;ETAT.focus=true;rendre()"></div><div class="chips">${f}</div>
+  <div class="carte" style="padding:6px 10px;overflow-x:auto"><table><tr><th>Ingrédient</th><th class="n">Prix HT</th><th class="n mc">Achat</th><th class="n mc">Rend.</th><th class="mc">Fournisseur</th><th class="n mc">Mis à jour</th><th class="n">Variation</th><th class="n">Recettes</th></tr>
+  ${l.map(i => { const p = prixAff(i); return `<tr class="clic" onclick="ouvrirIngredient('${i.id}')"><td>${esc(i.nom)}${i.ttc ? ' <span class="pill p-g">TTC</span>' : ''}</td><td class="n">${p === null ? '<span class="pill p-ko">sans prix</span>' : nf(p, i.unite === 'pièce' ? 1 : 0) + ' F/' + uniteLabel(i)}</td><td class="n petit mc">${i.prix !== null && i.prix !== undefined ? F(i.prix) + ' / ' + nf(i.cond) + ' ' + esc(i.unite) : ''}</td><td class="n mc">${i.rend && i.rend !== 1 ? P(i.rend) : ''}</td><td class="petit mc">${esc(i.fournisseur || '')}${i.source === 'facture' ? ' 🧾' : ''}</td><td class="n petit mc">${esc((i.maj || '').split('-').reverse().join('/'))}</td><td class="n">${varPill(i.variation)}</td><td class="n">${util[i.id] || ''}</td></tr>`; }).join('')}</table></div>
+  ${preps.length && !ETAT.fi ? `<div class="groupe">Recettes maison utilisées comme ingrédient</div><div class="carte" style="padding:6px 10px"><table><tr><th>Préparation</th><th class="n">Coût HT / kg</th><th class="n">Utilisée dans</th></tr>${preps.map(r => `<tr class="clic" onclick="location.hash='#/r/${r.id}'"><td class="violet">${esc(r.nom)}</td><td class="n">${PREPA[r.id] !== undefined ? nf(PREPA[r.id] * 1000) + ' F/kg' : '–'}</td><td class="n">${recettesUtilisant(D.recettes, 'r', r.id).length || ''}</td></tr>`).join('')}</table></div>` : ''}`;
+}
+let LIGNE_CIBLE = null;
+function ouvrirIngredient(id, nomNouveau, ligne) {
+  LIGNE_CIBLE = ligne ?? null;
+  const i = id ? ING(id) : { nom: nomNouveau || '', unite: 'g', cond: 1000, rend: null, prix: null };
+  const util = id ? recettesUtilisant(D.recettes, 'i', id).map(REC) : [];
+  const m = document.createElement('div'); m.className = 'modal'; m.onclick = e => { if (e.target === m) m.remove(); };
+  m.innerHTML = `<div><h2>${id ? esc(i.nom) : 'Nouvel ingrédient'}</h2>
+  ${i.source === 'facture' ? `<div class="carte" style="background:var(--verf);padding:8px 12px">🧾 Prix de la facture ${esc(i.facture || '')} (${esc(i.fournisseur || '')}). Il sera remplacé par la prochaine facture.${i.prec ? ` Avant : ${nf(i.unite === 'pièce' ? i.prec : i.prec * 1000)} F/${uniteLabel(i)} ${varPill(i.variation)}` : ''}</div>` : ''}
+  <div class="grille form" id="fi">
+    <div style="grid-column:1/-1"><label>Nom</label><input data-f="nom" value="${esc(i.nom)}"></div>
+    <div><label>Prix d'achat HT (XPF)</label><input data-f="prix" type="number" inputmode="decimal" value="${i.prix ?? ''}"></div>
+    <div><label>pour (quantité achetée)</label><input data-f="cond" type="number" inputmode="decimal" value="${i.cond ?? ''}"></div>
+    <div><label>Unité</label><select data-f="unite">${['g', 'ml', 'pièce'].map(u => `<option ${i.unite === u ? 'selected' : ''}>${u}</option>`).join('')}</select></div>
+    <div><label>Rendement (0,6 = 60 %)</label><input data-f="rend" type="number" step="0.05" inputmode="decimal" value="${i.rend ?? ''}" placeholder="100 %"></div>
+    <div><label>Fournisseur</label><input data-f="fournisseur" value="${esc(i.fournisseur || '')}"></div>
+    <div><label>Catégorie</label><input data-f="categorie" value="${esc(i.categorie || '')}"></div>
+    <div style="grid-column:1/-1"><label>Note</label><input data-f="note" value="${esc(i.note || '')}"></div>
+  </div><p class="petit" id="pu"></p>
+  ${util.length ? `<p class="petit">Utilisé dans : ${util.map(r => `<a href="#/r/${r.id}" onclick="this.closest('.modal').remove()">${esc(r.nom)}</a>`).join(', ')}</p>` : ''}
+  <div class="actions" style="margin-top:12px"><button onclick="sauverIngredient('${id || ''}')">Enregistrer</button><button class="sec" onclick="this.closest('.modal').remove();if(LIGNE_CIBLE!==null)dessinerLignes()">Annuler</button>${id && !util.length ? `<button class="dang" onclick="supprimerIngredient('${id}')">Supprimer</button>` : ''}</div></div>`;
+  document.body.appendChild(m);
+  const maj = () => { const v = lireIng(); const pu = prixUnite(v); $('#pu').textContent = pu === null ? '' : '= ' + (v.unite === 'pièce' ? nf(pu, 2) + ' F la pièce' : nf(pu, 4) + ' F/' + v.unite + ' · ' + nf(pu * 1000) + ' F/' + (v.unite === 'ml' ? 'L' : 'kg')); };
+  m.querySelectorAll('[data-f]').forEach(e => e.addEventListener('input', maj)); maj();
+}
+function lireIng() { const o = {}; document.querySelectorAll('#fi [data-f]').forEach(e => o[e.dataset.f] = e.value); for (const k of ['prix', 'cond', 'rend']) o[k] = o[k] === '' ? null : Number(o[k]); return o; }
+async function sauverIngredient(id) {
+  const o = lireIng(); if (id) o.id = id;
+  try {
+    const r = await api('saveIngredient', { ingredient: o });
+    const k = D.ingredients.findIndex(x => x.id === r.ingredient.id);
+    if (k < 0) D.ingredients.push(r.ingredient); else D.ingredients[k] = Object.assign({}, D.ingredients[k], r.ingredient);
+    recalculer(); document.querySelector('.modal').remove(); toast('Ingrédient enregistré');
+    if (LIGNE_CIBLE !== null && BROUILLON) { const l = BROUILLON.lignes[LIGNE_CIBLE]; l.t = 'i'; l.id = r.ingredient.id; delete l.nom; dessinerLignes(); }
+    else rendre();
+  } catch (e) { toast(e.message, 4000); }
+}
+async function supprimerIngredient(id) {
+  if (!confirm('Supprimer cet ingrédient ?')) return;
+  try { await api('supprimerIngredient', { id }); D.ingredients = D.ingredients.filter(x => x.id !== id); recalculer(); document.querySelector('.modal').remove(); rendre(); } catch (e) { toast(e.message, 4000); }
+}
+
+// ------------------------------------------------------------------ alertes
+function pageAlertes() {
+  const al = D.alertes.slice().reverse();
+  return `<h1>Alertes prix</h1><p class="petit">Hausse ou baisse d'au moins ${P(D.seuil || 0.05)} par rapport à l'achat précédent du même produit chez le même fournisseur, avec l'effet sur les recettes (y compris à travers les sauces maison).</p>
+  ${al.length ? al.map(a => `<div class="carte alerte ${a.variation < 0 ? 'baisse' : ''}"><div class="entete"><div><b style="font-size:16px">${esc(a.ingredient)}</b> ${varPill(a.variation)}<div class="petit">${F(a.ancien)} → <b>${F(a.nouveau)}</b> / ${esc(a.unite)} · ${esc(a.fournisseur || '')} · facture du ${esc((a.date || '').split('-').reverse().join('/'))}</div></div><div class="petit">signalé le ${esc(a.le)}</div></div>
+  ${a.impact.length ? `<table style="margin-top:6px"><tr><th>Recette</th><th class="n">Coût / portion</th><th class="n">Food cost</th></tr>${a.impact.map(i => { const r = REC(i.id); const c = r && C[r.id]; return `<tr class="clic" onclick="location.hash='#/r/${i.id}'"><td>${esc(i.nom)}</td><td class="n">${F(i.avant)} → ${F(i.apres)}</td><td class="n">${c && Number(r.prixTTC) ? fcPill(c.fc, c.cible) : ''}</td></tr>`; }).join('')}</table>` : '<div class="petit">Aucune recette n\'utilise cet ingrédient.</div>'}</div>`).join('') : '<div class="vide">Aucune alerte pour l\'instant. Elles arrivent chaque lundi avec les factures de la semaine.</div>'}`;
+}
+
+// ------------------------------------------------------------------ réglages
+function pageReglages() {
+  const push = 'serviceWorker' in navigator && 'PushManager' in window;
+  return `<h1>Réglages</h1>
+  <div class="carte"><h2>Notifications</h2><p class="petit">Recevoir les hausses / baisses de prix sur ce téléphone ou cet ordinateur. Sur iPhone : ajoutez d'abord l'appli à l'écran d'accueil (Partager › Sur l'écran d'accueil), puis ouvrez-la depuis l'icône.</p>
+  <div class="actions">${push ? '<button onclick="activerPush()">Activer les notifications</button><button class="sec" onclick="api(\'testNotif\').then(()=>toast(\'Envoyée\')).catch(e=>toast(e.message))">Tester</button>' : '<span class="petit">Ce navigateur ne gère pas les notifications.</span>'}</div></div>
+  <div class="carte"><h2>Seuil d'alerte</h2><div class="outils"><input type="number" id="seuil" value="${Math.round((D.seuil || 0.05) * 100)}" style="max-width:100px"> % <button class="sec" onclick="api('reglages',{seuil:Number($('#seuil').value)/100}).then(()=>{D.seuil=Number($('#seuil').value)/100;toast('Enregistré')}).catch(e=>toast(e.message))">Enregistrer</button></div></div>
+  <div class="carte"><h2>Code d'accès</h2><div class="grille form"><div><label>Code actuel</label><input id="c1" type="password" inputmode="numeric"></div><div><label>Nouveau code (4 à 8 chiffres)</label><input id="c2" type="password" inputmode="numeric"></div></div>
+  <p><button class="sec" onclick="api('changerCode',{ancien:$('#c1').value,nouveau:$('#c2').value}).then(()=>{toast('Code changé : reconnectez-vous');TOKEN='';localStorage.removeItem('rclv_token');rendre()}).catch(e=>toast(e.message))">Changer le code</button></p></div>
+  <div class="carte"><h2>Données</h2><div class="actions"><button class="sec" onclick="exporterCSV()">Exporter les recettes (Excel)</button><button class="sec" onclick="charger().then(()=>{rendre();toast('À jour')}).catch(e=>toast(e.message))">Recharger</button><button class="dang" onclick="api('deconnexion').finally(()=>{TOKEN='';localStorage.removeItem('rclv_token');D=null;rendre()})">Se déconnecter</button></div>
+  <p class="petit">Les prix des factures arrivent chaque lundi depuis le PC (tâche « CLV Prix fournisseurs »). Version ${APP_VERSION}.</p></div>`;
+}
+function b64u(s) { s = s.replace(/-/g, '+').replace(/_/g, '/'); s += '==='.slice((s.length + 3) % 4); const b = atob(s), u = new Uint8Array(b.length); for (let i = 0; i < b.length; i++) u[i] = b.charCodeAt(i); return u; }
+async function activerPush() {
+  try {
+    const reg = await navigator.serviceWorker.register('sw.js');
+    if (await Notification.requestPermission() !== 'granted') return toast('Notifications refusées');
+    let sub = await reg.pushManager.getSubscription();
+    if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64u(window.VAPID_PUBLIC) });
+    await api('abonner', { sub: sub.toJSON() }); toast('Notifications activées ✔');
+  } catch (e) { toast('Impossible : ' + e.message, 4000); }
+}
+function exporterCSV() {
+  const L = [['Recette', 'Dossier', 'Utilisable comme ingrédient', 'Portions', 'Coût total HT', 'Coût / portion', 'Coût / g HT', 'Prix TTC', 'Food cost', 'Cible', 'Prix TTC conseillé', 'Ingrédients manquants']];
+  for (const r of D.recettes.slice().sort((a, b) => (a.dossier || '').localeCompare(b.dossier || '', 'fr') || a.nom.localeCompare(b.nom, 'fr'))) {
+    const c = C[r.id]; L.push([r.nom, r.dossier || '', r.ingredient ? 'Oui' : '', c.portions, Math.round(c.total), Math.round(c.cp), c.cg !== null ? c.cg.toFixed(3).replace('.', ',') : '', r.prixTTC || '', c.fc !== null ? (c.fc * 100).toFixed(1).replace('.', ',') + ' %' : '', Math.round(c.cible * 100) + ' %', Math.round(c.conseil), c.manquants.join(', ')]);
+  }
+  const csv = '﻿' + L.map(l => l.map(x => '"' + String(x).replace(/"/g, '""') + '"').join(';')).join('\r\n');
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' })); a.download = 'Recettes CLV.csv'; a.click();
+}
+if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
+rendre();
+if (TOKEN) setTimeout(() => charger().then(rendre).catch(() => {}), 50);
+</script>
+</body>
+</html>
