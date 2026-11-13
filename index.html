@@ -4,58 +4,59 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Recettes CLV</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Titan+One&display=swap" rel="stylesheet">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" href="icon-192.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
-<meta name="theme-color" content="#025b3b">
+<meta name="theme-color" content="#4a5530">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Recettes CLV">
 <script>window.API_URL="https://recettes-clv.equipe-clv.workers.dev/";window.VAPID_PUBLIC="BCE-1Ot7AB7aPJFc2Jc8cCHbbTA6kQEMoUwF9MimZOslUbeX-7eZTYCO1I_Y-NWzWiAtNdsj3u89FzG3zcIxIAs";</script>
 <style>
-:root{--vert:#025b3b;--vert2:#0b7a52;--fond:#f3f7f6;--carte:#fff;--txt:#1d2b27;--gris:#6b7c76;--ligne:#dfe8e4;--rouge:#c0392b;--rougef:#fdecea;--orange:#d9822b;--orangef:#fff4e5;--verf:#e6f4ee;--violet:#6a3fa0;--jaune:#fff9db}
+:root{--vert:#4a5530;--vert2:#5f6c3b;--fond:#f6efdc;--beige:#f1e6cc;--carte:#fffdf7;--txt:#2b2f1f;--gris:#7a7a62;--ligne:#e6dcc3;--rouge:#c0392b;--rougef:#fdecea;--orange:#d9822b;--orangef:#fff4e5;--verf:#e8ebd6;--violet:#6a3fa0;--jaune:#fff9db}
 *{box-sizing:border-box}
 html,body{margin:0;background:var(--fond);color:var(--txt);font:15px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif}
 a{color:var(--vert2);text-decoration:none}
 button{font:inherit;cursor:pointer;border:0;border-radius:10px;padding:9px 14px;background:var(--vert);color:#fff}
-button.sec{background:#e3ece8;color:var(--vert)}button.dang{background:var(--rougef);color:var(--rouge)}button.lien{background:none;color:var(--vert2);padding:4px 6px}
+button.sec{background:var(--beige);color:var(--vert)}button.dang{background:var(--rougef);color:var(--rouge)}button.lien{background:none;color:var(--vert2);padding:4px 6px}
 button:disabled{opacity:.5}
-input,select,textarea{font:inherit;border:1px solid #cdd9d4;border-radius:9px;padding:8px 10px;background:#fff;color:var(--txt);width:100%}
+input,select,textarea{font:inherit;border:1px solid #d9cfb4;border-radius:9px;padding:8px 10px;background:#fff;color:var(--txt);width:100%}
 textarea{min-height:90px;resize:vertical}
-input:focus,select:focus,textarea:focus{outline:2px solid #9fd3bd;border-color:var(--vert2)}
+input:focus,select:focus,textarea:focus{outline:2px solid #c9cf9f;border-color:var(--vert2)}
 label{font-size:12px;color:var(--gris);display:block;margin:0 0 3px}
 #app{display:flex;min-height:100vh}
 nav{background:var(--vert);color:#fff;display:flex}
-nav a{color:#cfe7dc;display:flex;align-items:center;gap:8px;padding:10px 14px;border-radius:10px;position:relative;white-space:nowrap}
-nav a.on{background:rgba(255,255,255,.14);color:#fff}
+nav a{color:#e4dcc0;display:flex;align-items:center;gap:8px;padding:10px 14px;border-radius:10px;position:relative;white-space:nowrap}
+nav a.on{background:var(--beige);color:var(--vert)}
 nav .ico{font-size:18px;width:22px;text-align:center}
 .badge{background:#ff6b5a;color:#fff;border-radius:10px;font-size:11px;padding:1px 6px;font-weight:600}
 main{flex:1;min-width:0;padding:18px 22px 90px;max-width:1250px;margin:0 auto;width:100%}
-@media (min-width:900px){nav{flex-direction:column;width:215px;padding:16px 10px;gap:4px;position:sticky;top:0;height:100vh}nav .titre{font-weight:700;font-size:18px;padding:6px 12px 16px;color:#fff}}
+@media (min-width:900px){nav{flex-direction:column;width:215px;padding:16px 10px;gap:4px;position:sticky;top:0;height:100vh}nav .titre{padding:4px 12px 14px;text-align:center}nav .titre img{width:150px;border-radius:18px}}
 @media (max-width:899px){#app{flex-direction:column}nav{position:fixed;bottom:0;left:0;right:0;z-index:20;justify-content:space-around;padding:4px 2px calc(4px + env(safe-area-inset-bottom))}nav .titre{display:none}nav a{flex-direction:column;gap:1px;font-size:10.5px;padding:5px 6px}nav a .badge{position:absolute;top:0;right:2px}main{padding:14px 12px 96px}}
-h1{font-size:22px;margin:4px 0 14px}h2{font-size:16px;margin:0 0 10px}
+h1{font-size:23px;margin:4px 0 14px;font-family:'Titan One',system-ui,sans-serif;font-weight:400;color:var(--vert);letter-spacing:.3px}h2{font-size:16px;margin:0 0 10px}
 .carte{background:var(--carte);border-radius:14px;padding:14px 16px;box-shadow:0 1px 2px rgba(0,0,0,.05);margin-bottom:14px}
 .grille{display:grid;gap:12px}
 .kpis{grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
-.kpi{background:#fff;border-radius:14px;padding:12px 14px;box-shadow:0 1px 2px rgba(0,0,0,.05)}
+.kpi{background:var(--carte);border-radius:14px;padding:12px 14px;box-shadow:0 1px 2px rgba(0,0,0,.05)}
 .kpi .v{font-size:24px;font-weight:700;color:var(--vert)}.kpi .l{font-size:12px;color:var(--gris)}
 .kpi.rouge .v{color:var(--rouge)}
 .deux{grid-template-columns:1fr}@media (min-width:1000px){.deux{grid-template-columns:1fr 1fr}}
 table{width:100%;border-collapse:collapse;font-size:14px}
 th{font-size:11.5px;color:var(--gris);text-align:left;font-weight:600;padding:6px 6px;border-bottom:1px solid var(--ligne);white-space:nowrap}
-td{padding:7px 6px;border-bottom:1px solid #eef3f1;vertical-align:middle}
+td{padding:7px 6px;border-bottom:1px solid #f0e9d8;vertical-align:middle}
 td.n,th.n{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
-tr.clic{cursor:pointer}tr.clic:hover{background:#f6faf8}
+tr.clic{cursor:pointer}tr.clic:hover{background:#f7f1e2}
 .pill{display:inline-block;border-radius:20px;padding:2px 8px;font-size:12px;font-weight:600;white-space:nowrap}
 .p-ok{background:var(--verf);color:#1e7a4c}.p-ko{background:var(--rougef);color:var(--rouge)}.p-warn{background:var(--orangef);color:var(--orange)}.p-m{background:#efe7f8;color:var(--violet)}.p-g{background:#edf1ef;color:var(--gris)}
 .barre{display:flex;align-items:center;gap:8px;margin:5px 0;font-size:13px}
 .barre .nom{width:42%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.barre .piste{flex:1;background:#edf3f0;border-radius:6px;height:14px;position:relative}
+.barre .piste{flex:1;background:#efe8d4;border-radius:6px;height:14px;position:relative}
 .barre .rem{height:100%;border-radius:6px;background:var(--vert2)}.barre .rem.ko{background:var(--rouge)}
 .barre .cible{position:absolute;top:-3px;bottom:-3px;width:2px;background:#333;opacity:.5}
 .barre .val{width:48px;text-align:right;font-variant-numeric:tabular-nums}
 .outils{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px}.outils input{max-width:320px}
-.chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}.chip{background:#fff;border:1px solid var(--ligne);border-radius:20px;padding:5px 11px;font-size:13px;cursor:pointer}.chip.on{background:var(--vert);border-color:var(--vert);color:#fff}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}.chip{background:var(--carte);border:1px solid var(--ligne);border-radius:20px;padding:5px 11px;font-size:13px;cursor:pointer}.chip.on{background:var(--vert);border-color:var(--vert);color:#fff}
 .groupe{font-weight:700;color:var(--vert);margin:16px 0 4px;font-size:13px;text-transform:uppercase;letter-spacing:.04em}
 .vide{color:var(--gris);padding:14px 0;text-align:center}
 .entete{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap}
@@ -202,7 +203,7 @@ function rendre() {
   if (!D) { root.innerHTML = '<div class="vide" style="margin-top:30vh">Chargement…</div>'; charger().then(rendre).catch(e => toast(e.message)); return; }
   const h = location.hash || '#/';
   const base = '#/' + (h.split('/')[1] || '');
-  const nav = '<nav><div class="titre">🍳 Recettes CLV</div>' + PAGES.map(([u, i, l]) => {
+  const nav = '<nav><div class="titre"><img src="logo.png" alt="Recettes"></div>' + PAGES.map(([u, i, l]) => {
     const on = (u === base || (u === '#/recettes' && (base === '#/r' || base === '#/edit')) || (u === '#/ingredients' && base === '#/i'));
     const b = (u === '#/alertes' && D.nonLues) ? ` <span class="badge">${D.nonLues}</span>` : '';
     return `<a href="${u}" class="${on ? 'on' : ''}"><span class="ico">${i}</span><span>${l}</span>${b}</a>`;
@@ -229,7 +230,7 @@ const ETAT = { q: '', dossier: '', type: '', qi: '', fi: '', focus: false };
 
 // ------------------------------------------------------------------ connexion
 function pageLogin() {
-  return `<div class="login carte"><h1>🍳 Recettes CLV</h1><p class="petit">Coûts des recettes, sauces maison et prix des fournisseurs</p>
+  return `<div class="login carte"><img src="logo.png" alt="Recettes" style="width:200px;border-radius:24px"><h1 style="margin-top:4px">Recettes CLV</h1><p class="petit">Coûts des recettes, sauces maison et prix des fournisseurs</p>
   <input id="code" type="password" inputmode="numeric" maxlength="8" placeholder="••••" onkeydown="if(event.key==='Enter')login()">
   <p><button onclick="login()" style="width:100%">Entrer</button></p></div>`;
 }
