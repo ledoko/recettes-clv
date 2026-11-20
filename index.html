@@ -77,6 +77,10 @@ tr.clic{cursor:pointer}tr.clic:hover{background:#f7f1e2}
 .petit{font-size:12px;color:var(--gris)}
 th.tri{cursor:pointer;user-select:none}th.tri:hover,th.tri.on{color:var(--vert)}th.tri .fl{opacity:.45;font-size:10px}th.tri.on .fl{opacity:1}
 .outils select{max-width:220px}
+input.renom{border:1px solid transparent;background:transparent;padding:3px 6px;margin-left:-6px;min-width:190px;font-weight:500}
+input.renom:hover{border-color:var(--ligne);background:#fff}input.renom:focus{background:#fff}
+td.desig{font-family:Consolas,monospace;font-size:11.5px;color:#5c5a46;max-width:300px}
+.mo{display:none}@media (max-width:640px){.mo{display:inline}}
 .alerte{border-left:4px solid var(--rouge)}.alerte.baisse{border-left-color:#1e7a4c}
 .vert{color:#1e7a4c}.rouge{color:var(--rouge)}.violet{color:var(--violet)}
 @media (max-width:640px){.mc{display:none}.carte{padding:12px}}
@@ -466,7 +470,7 @@ function pageIngredients() {
     && (!ETAT.fi || (ETAT.fi === 'facture' ? i.source === 'facture' : ETAT.fi === 'sans' ? prixUnite(i) === null : ETAT.fi === 'var' ? Math.abs(i.variation || 0) >= (D.seuil || 0.05) : ETAT.fi === 'util' ? util[i.id] : true)));
   if (ETAT.fo) l = l.filter(i => (i.fournisseur || '—') === ETAT.fo);
   const get = (i, k) => k === 'nom' ? i.nom : k === 'prix' ? prixAff(i) : k === 'achat' ? i.prix : k === 'rend' ? (i.rend || 1) : k === 'fournisseur' ? (i.fournisseur || '') :
-    k === 'maj' ? (i.maj || '') : k === 'var' ? i.variation : k === 'util' ? (util[i.id] || 0) : null;
+    k === 'maj' ? (i.maj || '') : k === 'var' ? i.variation : k === 'util' ? (util[i.id] || 0) : k === 'desig' ? (i.designation || '') : null;
   l = trier(l, ETAT.tri.ing.k, ETAT.tri.ing.s, get);
   const fourn = [...new Set(D.ingredients.map(i => i.fournisseur || '—'))].sort((a, b) => a.localeCompare(b, 'fr'));
   const preps = D.recettes.filter(r => r.ingredient && (!q || norm(r.nom).includes(q)));
@@ -475,8 +479,8 @@ function pageIngredients() {
   <div class="outils"><input id="cherche" placeholder="Rechercher (nom, fournisseur)…" value="${esc(ETAT.qi)}" oninput="ETAT.qi=this.value;ETAT.focus=true;rendre()">
   <select onchange="ETAT.fo=this.value;ETAT.focus=false;rendre()"><option value="">Tous les fournisseurs</option>${fourn.map(f => `<option ${ETAT.fo === f ? 'selected' : ''}>${esc(f)}</option>`).join('')}</select>
   <span class="petit">${l.length} ingrédient${l.length > 1 ? 's' : ''} · cliquez sur un titre de colonne pour trier</span></div><div class="chips">${f}</div>
-  <div class="carte" style="padding:6px 10px;overflow-x:auto"><table><tr>${thTri('ing', 'nom', 'Ingrédient')}${thTri('ing', 'prix', 'Prix HT', 'n')}${thTri('ing', 'achat', 'Achat', 'n mc')}${thTri('ing', 'rend', 'Rend.', 'n mc')}${thTri('ing', 'fournisseur', 'Fournisseur', 'mc')}${thTri('ing', 'maj', 'Mis à jour', 'n mc')}${thTri('ing', 'var', 'Variation', 'n')}${thTri('ing', 'util', 'Recettes', 'n')}</tr>
-  ${l.map(i => { const p = prixAff(i); return `<tr class="clic" onclick="ouvrirIngredient('${i.id}')"><td>${esc(i.nom)}${i.ttc ? ' <span class="pill p-g">TTC</span>' : ''}</td><td class="n">${p === null ? '<span class="pill p-ko">sans prix</span>' : nf(p, i.unite === 'pièce' ? 1 : 0) + ' F/' + uniteLabel(i)}</td><td class="n petit mc">${i.prix !== null && i.prix !== undefined ? F(i.prix) + ' / ' + nf(i.cond) + ' ' + esc(i.unite) : ''}</td><td class="n mc">${i.rend && i.rend !== 1 ? P(i.rend) : ''}</td><td class="petit mc">${esc(i.fournisseur || '')}${i.source === 'facture' ? ' 🧾' : ''}</td><td class="n petit mc">${esc((i.maj || '').split('-').reverse().join('/'))}</td><td class="n">${varPill(i.variation)}</td><td class="n">${util[i.id] || ''}</td></tr>`; }).join('')}</table></div>
+  <div class="carte" style="padding:6px 10px;overflow-x:auto"><table><tr>${thTri('ing', 'nom', 'Nom dans les recettes <span class="petit">(modifiable)</span>')}${thTri('ing', 'desig', 'Nom chez le fournisseur', 'mc')}${thTri('ing', 'prix', 'Prix HT', 'n')}${thTri('ing', 'achat', 'Achat', 'n mc')}${thTri('ing', 'rend', 'Rend.', 'n mc')}${thTri('ing', 'fournisseur', 'Fournisseur', 'mc')}${thTri('ing', 'maj', 'Mis à jour', 'n mc')}${thTri('ing', 'var', 'Variation', 'n')}${thTri('ing', 'util', 'Recettes', 'n')}</tr>
+  ${l.map(i => { const p = prixAff(i); return `<tr class="clic" onclick="ouvrirIngredient('${i.id}')"><td><input class="renom mc" value="${esc(i.nom)}" title="Renommer (Entrée pour valider)" onclick="event.stopPropagation()" onkeydown="if(event.key==='Enter')this.blur()" onchange="renommer('${i.id}',this)"><span class="mo">${esc(i.nom)}</span>${i.ttc ? ' <span class="pill p-g">TTC</span>' : ''}</td><td class="mc petit desig" title="${esc((i.designations || []).join(' / '))}">${esc(i.designation || '')}${(i.designations || []).length > 1 ? ` <span class="pill p-g">+${i.designations.length - 1}</span>` : ''}</td><td class="n">${p === null ? '<span class="pill p-ko">sans prix</span>' : nf(p, i.unite === 'pièce' ? 1 : 0) + ' F/' + uniteLabel(i)}</td><td class="n petit mc">${i.prix !== null && i.prix !== undefined ? F(i.prix) + ' / ' + nf(i.cond) + ' ' + esc(i.unite) : ''}</td><td class="n mc">${i.rend && i.rend !== 1 ? P(i.rend) : ''}</td><td class="petit mc">${esc(i.fournisseur || '')}${i.source === 'facture' ? ' 🧾' : ''}</td><td class="n petit mc">${esc((i.maj || '').split('-').reverse().join('/'))}</td><td class="n">${varPill(i.variation)}</td><td class="n">${util[i.id] || ''}</td></tr>`; }).join('')}</table></div>
   ${preps.length && !ETAT.fi ? `<div class="groupe">Recettes maison utilisées comme ingrédient</div><div class="carte" style="padding:6px 10px"><table><tr><th>Préparation</th><th class="n">Coût HT / kg</th><th class="n">Utilisée dans</th></tr>${preps.map(r => `<tr class="clic" onclick="location.hash='#/r/${r.id}'"><td class="violet">${esc(r.nom)}</td><td class="n">${PREPA[r.id] !== undefined ? nf(PREPA[r.id] * 1000) + ' F/kg' : '–'}</td><td class="n">${recettesUtilisant(D.recettes, 'r', r.id).length || ''}</td></tr>`).join('')}</table></div>` : ''}`;
 }
 let LIGNE_CIBLE = null;
@@ -487,6 +491,7 @@ function ouvrirIngredient(id, nomNouveau, ligne) {
   const m = document.createElement('div'); m.className = 'modal'; m.onclick = e => { if (e.target === m) m.remove(); };
   m.innerHTML = `<div><h2>${id ? esc(i.nom) : 'Nouvel ingrédient'}</h2>
   ${i.source === 'facture' ? `<div class="carte" style="background:var(--verf);padding:8px 12px">🧾 Prix de la facture ${esc(i.facture || '')} (${esc(i.fournisseur || '')}). Il sera remplacé par la prochaine facture.${i.prec ? ` Avant : ${nf(i.unite === 'pièce' ? i.prec : i.prec * 1000)} F/${uniteLabel(i)} ${varPill(i.variation)}` : ''}</div>` : ''}
+  ${(i.designations || []).length ? `<div class="petit" style="margin-bottom:8px">Sur les factures : ${i.designations.map(d => `<div style="font-family:Consolas,monospace">${esc(d)}</div>`).join('')}</div>` : ''}
   <div class="grille form" id="fi">
     <div style="grid-column:1/-1"><label>Nom</label><input data-f="nom" value="${esc(i.nom)}"></div>
     <div><label>Prix d'achat HT (XPF)</label><input data-f="prix" type="number" inputmode="decimal" value="${i.prix ?? ''}"></div>
@@ -514,6 +519,14 @@ async function sauverIngredient(id) {
     if (LIGNE_CIBLE !== null && BROUILLON) { const l = BROUILLON.lignes[LIGNE_CIBLE]; l.t = 'i'; l.id = r.ingredient.id; delete l.nom; dessinerLignes(); }
     else rendre();
   } catch (e) { toast(e.message, 4000); }
+}
+async function renommer(id, el) {
+  const i = ING(id), nom = el.value.trim();
+  if (!nom || nom === i.nom) { el.value = i.nom; return; }
+  try {
+    const r = await api('saveIngredient', { ingredient: Object.assign({}, i, { nom }) });
+    Object.assign(i, r.ingredient, { nom }); recalculer(); toast('Renommé : ' + nom + ' (le lien avec les factures est gardé)');
+  } catch (e) { el.value = i.nom; toast(e.message, 4000); }
 }
 async function supprimerIngredient(id) {
   if (!confirm('Supprimer cet ingrédient ?')) return;
