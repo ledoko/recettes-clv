@@ -75,6 +75,8 @@ tr.clic{cursor:pointer}tr.clic:hover{background:#f7f1e2}
 #toast{position:fixed;left:50%;transform:translateX(-50%);bottom:88px;background:#1d2b27;color:#fff;padding:10px 16px;border-radius:10px;z-index:60;display:none;max-width:90%}
 .login{max-width:330px;margin:12vh auto;text-align:center}.login input{font-size:28px;text-align:center;letter-spacing:12px}
 .petit{font-size:12px;color:var(--gris)}
+th.tri{cursor:pointer;user-select:none}th.tri:hover,th.tri.on{color:var(--vert)}th.tri .fl{opacity:.45;font-size:10px}th.tri.on .fl{opacity:1}
+.outils select{max-width:220px}
 .alerte{border-left:4px solid var(--rouge)}.alerte.baisse{border-left-color:#1e7a4c}
 .vert{color:#1e7a4c}.rouge{color:var(--rouge)}.violet{color:var(--violet)}
 @media (max-width:640px){.mc{display:none}.carte{padding:12px}}
@@ -227,7 +229,25 @@ function rendre() {
   if (base === '#/alertes' && D.nonLues) { api('alertesLues').then(() => { D.nonLues = 0; for (const a of D.alertes) a.lue = true; }).catch(() => {}); }
 }
 window.addEventListener('hashchange', () => { window.scrollTo(0, 0); rendre(); });
-const ETAT = { q: '', dossier: '', type: '', qi: '', fi: '', focus: false };
+const ETAT = { q: '', dossier: '', type: '', qi: '', fi: '', fo: '', focus: false, tri: { ing: { k: 'nom', s: 1 }, rec: { k: '', s: 1 } } };
+// tri des tableaux : clic sur un titre de colonne (2e clic = ordre inverse). Les cases vides vont toujours à la fin.
+function trier(liste, k, s, get) {
+  return liste.slice().sort((a, b) => {
+    const x = get(a, k), y = get(b, k);
+    const vx = x === null || x === undefined || x === '' || (typeof x === 'number' && isNaN(x)), vy = y === null || y === undefined || y === '' || (typeof y === 'number' && isNaN(y));
+    if (vx || vy) return vx && vy ? 0 : (vx ? 1 : -1);
+    return (typeof x === 'string' ? x.localeCompare(y, 'fr', { sensitivity: 'base' }) : x - y) * s;
+  });
+}
+function thTri(t, k, label, cls = '') {
+  const e = ETAT.tri[t], on = e.k === k;
+  return `<th class="${cls} tri ${on ? 'on' : ''}" onclick="trierPar('${t}','${k}')" title="Trier">${label}<span class="fl">${on ? (e.s > 0 ? ' ▲' : ' ▼') : ' ↕'}</span></th>`;
+}
+function trierPar(t, k) {
+  const e = ETAT.tri[t];
+  if (e.k === k) e.s = -e.s; else { e.k = k; e.s = (k === 'nom' || k === 'fournisseur' || k === 'dossier') ? 1 : -1; }
+  ETAT.focus = false; rendre();
+}
 
 // ------------------------------------------------------------------ connexion
 function pageLogin() {
@@ -285,12 +305,14 @@ function pageRecettes() {
   const q = norm(ETAT.q);
   let l = D.recettes.filter(r => (!q || norm(r.nom + ' ' + (r.dossier || '')).includes(q)) && (!ETAT.dossier || (r.dossier || 'Sans dossier') === ETAT.dossier)
     && (!ETAT.type || (ETAT.type === 'prep' ? r.ingredient : (ETAT.type === 'vente' ? Number(r.prixTTC) : (ETAT.type === 'ko' ? (C[r.id] && C[r.id].fc > C[r.id].cible) : C[r.id] && C[r.id].manquants.length)))));
+  const getR = (r, k) => { const c = C[r.id] || {}; return k === 'nom' ? r.nom : k === 'total' ? c.total : k === 'cp' ? c.cp : k === 'cg' ? c.cg : k === 'prix' ? (Number(r.prixTTC) || null) : k === 'fc' ? (Number(r.prixTTC) ? c.fc : null) : null; };
+  const tr = ETAT.tri.rec, tk = tr.k || 'nom', ts = tr.k ? tr.s : 1;
   const g = {}; for (const r of l) (g[r.dossier || 'Sans dossier'] = g[r.dossier || 'Sans dossier'] || []).push(r);
   const chips = ['', ...dossiers()].map(d => `<span class="chip ${ETAT.dossier === d ? 'on' : ''}" onclick="ETAT.dossier='${esc(d)}';rendre()">${d ? esc(d) : 'Tous'}</span>`).join('');
   const types = [['', 'Toutes'], ['vente', 'Vendues'], ['prep', 'Sauces / préparations'], ['ko', 'Au-dessus de la cible'], ['inc', 'À compléter']].map(([k, t]) => `<span class="chip ${ETAT.type === k ? 'on' : ''}" onclick="ETAT.type='${k}';rendre()">${t}</span>`).join('');
   const corps = Object.keys(g).sort((a, b) => a.localeCompare(b, 'fr')).map(d => `<div class="groupe">${esc(d)}</div><div class="carte" style="padding:6px 10px"><table>
-    <tr><th>Recette</th><th class="n mc">Coût total</th><th class="n">Coût / portion</th><th class="n mc">Coût / g</th><th class="n">Prix TTC</th><th class="n">Food cost</th></tr>
-    ${g[d].sort((a, b) => a.nom.localeCompare(b.nom, 'fr')).map(r => { const c = C[r.id] || {}; return `<tr class="clic" onclick="location.hash='#/r/${r.id}'"><td>${esc(r.nom)} ${r.ingredient ? '<span class="pill p-m">ingrédient</span>' : ''} ${c.manquants && c.manquants.length ? '<span class="pill p-warn">incomplet</span>' : ''}</td><td class="n mc">${F(c.total)}</td><td class="n">${F(c.cp)}</td><td class="n mc">${c.cg !== null ? nf(c.cg, 2) + ' F' : '–'}</td><td class="n">${Number(r.prixTTC) ? F(r.prixTTC) : '–'}</td><td class="n">${Number(r.prixTTC) ? fcPill(c.fc, c.cible) : ''}</td></tr>`; }).join('')}</table></div>`).join('');
+    <tr>${thTri('rec', 'nom', 'Recette')}${thTri('rec', 'total', 'Coût total', 'n mc')}${thTri('rec', 'cp', 'Coût / portion', 'n')}${thTri('rec', 'cg', 'Coût / g', 'n mc')}${thTri('rec', 'prix', 'Prix TTC', 'n')}${thTri('rec', 'fc', 'Food cost', 'n')}</tr>
+    ${trier(g[d], tk, ts, getR).map(r => { const c = C[r.id] || {}; return `<tr class="clic" onclick="location.hash='#/r/${r.id}'"><td>${esc(r.nom)} ${r.ingredient ? '<span class="pill p-m">ingrédient</span>' : ''} ${c.manquants && c.manquants.length ? '<span class="pill p-warn">incomplet</span>' : ''}</td><td class="n mc">${F(c.total)}</td><td class="n">${F(c.cp)}</td><td class="n mc">${c.cg !== null ? nf(c.cg, 2) + ' F' : '–'}</td><td class="n">${Number(r.prixTTC) ? F(r.prixTTC) : '–'}</td><td class="n">${Number(r.prixTTC) ? fcPill(c.fc, c.cible) : ''}</td></tr>`; }).join('')}</table></div>`).join('');
   return `<div class="entete"><h1>Recettes</h1><div class="actions"><button onclick="location.hash='#/edit/nouvelle'">+ Nouvelle recette</button><button class="sec" onclick="exporterCSV()">Exporter (Excel)</button></div></div>
   <div class="outils"><input id="cherche" placeholder="Rechercher une recette…" value="${esc(ETAT.q)}" oninput="ETAT.q=this.value;ETAT.focus=true;rendre()"></div>
   <div class="chips">${types}</div><div class="chips">${chips}</div>${corps || '<div class="vide">Aucune recette.</div>'}`;
@@ -442,12 +464,18 @@ function pageIngredients() {
   const util = {}; for (const r of D.recettes) for (const l of r.lignes || []) if (l.t === 'i') util[l.id] = (util[l.id] || 0) + 1;
   let l = D.ingredients.filter(i => (!q || norm(i.nom + ' ' + (i.fournisseur || '') + ' ' + (i.categorie || '')).includes(q))
     && (!ETAT.fi || (ETAT.fi === 'facture' ? i.source === 'facture' : ETAT.fi === 'sans' ? prixUnite(i) === null : ETAT.fi === 'var' ? Math.abs(i.variation || 0) >= (D.seuil || 0.05) : ETAT.fi === 'util' ? util[i.id] : true)));
-  l.sort((a, b) => a.nom.localeCompare(b.nom, 'fr'));
+  if (ETAT.fo) l = l.filter(i => (i.fournisseur || '—') === ETAT.fo);
+  const get = (i, k) => k === 'nom' ? i.nom : k === 'prix' ? prixAff(i) : k === 'achat' ? i.prix : k === 'rend' ? (i.rend || 1) : k === 'fournisseur' ? (i.fournisseur || '') :
+    k === 'maj' ? (i.maj || '') : k === 'var' ? i.variation : k === 'util' ? (util[i.id] || 0) : null;
+  l = trier(l, ETAT.tri.ing.k, ETAT.tri.ing.s, get);
+  const fourn = [...new Set(D.ingredients.map(i => i.fournisseur || '—'))].sort((a, b) => a.localeCompare(b, 'fr'));
   const preps = D.recettes.filter(r => r.ingredient && (!q || norm(r.nom).includes(q)));
   const f = [['', 'Tous'], ['util', 'Utilisés dans une recette'], ['facture', 'Prix des factures'], ['var', 'Prix qui ont bougé'], ['sans', 'Sans prix']].map(([k, t]) => `<span class="chip ${ETAT.fi === k ? 'on' : ''}" onclick="ETAT.fi='${k}';rendre()">${t}</span>`).join('');
   return `<div class="entete"><h1>Ingrédients</h1><div class="actions"><button onclick="ouvrirIngredient(null)">+ Nouvel ingrédient</button></div></div>
-  <div class="outils"><input id="cherche" placeholder="Rechercher (nom, fournisseur)…" value="${esc(ETAT.qi)}" oninput="ETAT.qi=this.value;ETAT.focus=true;rendre()"></div><div class="chips">${f}</div>
-  <div class="carte" style="padding:6px 10px;overflow-x:auto"><table><tr><th>Ingrédient</th><th class="n">Prix HT</th><th class="n mc">Achat</th><th class="n mc">Rend.</th><th class="mc">Fournisseur</th><th class="n mc">Mis à jour</th><th class="n">Variation</th><th class="n">Recettes</th></tr>
+  <div class="outils"><input id="cherche" placeholder="Rechercher (nom, fournisseur)…" value="${esc(ETAT.qi)}" oninput="ETAT.qi=this.value;ETAT.focus=true;rendre()">
+  <select onchange="ETAT.fo=this.value;ETAT.focus=false;rendre()"><option value="">Tous les fournisseurs</option>${fourn.map(f => `<option ${ETAT.fo === f ? 'selected' : ''}>${esc(f)}</option>`).join('')}</select>
+  <span class="petit">${l.length} ingrédient${l.length > 1 ? 's' : ''} · cliquez sur un titre de colonne pour trier</span></div><div class="chips">${f}</div>
+  <div class="carte" style="padding:6px 10px;overflow-x:auto"><table><tr>${thTri('ing', 'nom', 'Ingrédient')}${thTri('ing', 'prix', 'Prix HT', 'n')}${thTri('ing', 'achat', 'Achat', 'n mc')}${thTri('ing', 'rend', 'Rend.', 'n mc')}${thTri('ing', 'fournisseur', 'Fournisseur', 'mc')}${thTri('ing', 'maj', 'Mis à jour', 'n mc')}${thTri('ing', 'var', 'Variation', 'n')}${thTri('ing', 'util', 'Recettes', 'n')}</tr>
   ${l.map(i => { const p = prixAff(i); return `<tr class="clic" onclick="ouvrirIngredient('${i.id}')"><td>${esc(i.nom)}${i.ttc ? ' <span class="pill p-g">TTC</span>' : ''}</td><td class="n">${p === null ? '<span class="pill p-ko">sans prix</span>' : nf(p, i.unite === 'pièce' ? 1 : 0) + ' F/' + uniteLabel(i)}</td><td class="n petit mc">${i.prix !== null && i.prix !== undefined ? F(i.prix) + ' / ' + nf(i.cond) + ' ' + esc(i.unite) : ''}</td><td class="n mc">${i.rend && i.rend !== 1 ? P(i.rend) : ''}</td><td class="petit mc">${esc(i.fournisseur || '')}${i.source === 'facture' ? ' 🧾' : ''}</td><td class="n petit mc">${esc((i.maj || '').split('-').reverse().join('/'))}</td><td class="n">${varPill(i.variation)}</td><td class="n">${util[i.id] || ''}</td></tr>`; }).join('')}</table></div>
   ${preps.length && !ETAT.fi ? `<div class="groupe">Recettes maison utilisées comme ingrédient</div><div class="carte" style="padding:6px 10px"><table><tr><th>Préparation</th><th class="n">Coût HT / kg</th><th class="n">Utilisée dans</th></tr>${preps.map(r => `<tr class="clic" onclick="location.hash='#/r/${r.id}'"><td class="violet">${esc(r.nom)}</td><td class="n">${PREPA[r.id] !== undefined ? nf(PREPA[r.id] * 1000) + ' F/kg' : '–'}</td><td class="n">${recettesUtilisant(D.recettes, 'r', r.id).length || ''}</td></tr>`).join('')}</table></div>` : ''}`;
 }
