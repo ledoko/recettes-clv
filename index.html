@@ -208,6 +208,16 @@ function fcPill(fc, cible) { if (fc === null || fc === undefined) return '<span 
 function varPill(v) { if (v === null || v === undefined) return ''; if (Math.abs(v) < 0.005) return '<span class="pill p-g">=</span>'; return `<span class="pill ${v > 0 ? 'p-ko' : 'p-ok'}">${v > 0 ? '+' : '−'}${nf(Math.abs(v) * 100, 0)} %</span>`; }
 const vendues = () => D.recettes.filter(r => Number(r.prixTTC));
 const versionsDe = r => r && r.famille ? D.recettes.filter(o => o.famille && norm(o.famille) === norm(r.famille)).sort((a, b) => (a.version || a.nom).localeCompare(b.version || b.nom, 'fr', { numeric: true })) : [];
+// tailles : la recette telle que saisie = taille de base (coef 1) ; chaque autre taille multiplie toutes les quantités
+const taillesDe = r => r ? [{ nom: r.tailleBase || 'Normal', coef: 1, prixTTC: r.prixTTC ?? null, base: true }, ...(r.tailles || [])] : [];
+function calcTaille(r, nomT) {
+  const c = C[r.id]; if (!c) return { c, t: null };
+  const T = taillesDe(r), t = T.find(x => x.nom === nomT) || T[0], k = Number(t.coef) || 1;
+  const tgc = (r.tgc === null || r.tgc === undefined || r.tgc === '') ? 0.06 : Number(r.tgc), ht = Number(t.prixTTC) ? Number(t.prixTTC) / (1 + tgc) : null, cp = c.cp * k;
+  return { t, c: Object.assign({}, c, { total: c.total * k, net: c.net * k, poids: c.poids * k, cp, ht, fc: ht ? cp / ht : null, marge: ht ? ht - cp : null,
+    coef: ht && cp ? ht / cp : null, conseil: cp / c.cible * (1 + tgc), lignes: c.lignes.map(l => Object.assign({}, l, { qte: l.qte === null ? null : l.qte * k, brut: l.brut === null ? null : l.brut * k, cout: l.cout === null ? null : l.cout * k })) }) };
+}
+function choisirTaille(id, k) { ETAT.taille = ETAT.taille || {}; ETAT.taille[id] = taillesDe(REC(id))[k].nom; rendre(); }
 const familles = () => [...new Set(D.recettes.map(r => r.famille).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'fr'));
 const dossiers = () => [...new Set(D.recettes.map(r => r.dossier || 'Sans dossier'))].sort((a, b) => a.localeCompare(b, 'fr'));
 
@@ -317,8 +327,8 @@ function pageDashboard() {
 
 // ------------------------------------------------------------------ carte (menus affichés comme en salle)
 let CARTE_B = null; // brouillon en mode modification
-function fcCarte(rid, prix) {
-  const r = REC(rid), c = r && C[r.id]; if (!c || !Number(prix)) return { c, fc: null };
+function fcCarte(rid, prix, taille) {
+  const r = REC(rid), c = r && calcTaille(r, taille).c; if (!c || !Number(prix)) return { c, fc: null };
   const ht = Number(prix) / (1 + Number(r.tgc ?? 0.06));
   return { c, fc: c.cp !== null && c.cp !== undefined ? c.cp / ht : null };
 }
@@ -328,25 +338,26 @@ function pageCarte() {
   const m = Math.min(ETAT.carte || 0, K.length - 1), menu = K[m], ed = !!CARTE_B;
   const chips = K.map((x, k) => `<span class="chip ${k === m ? 'on' : ''}" onclick="ETAT.carte=${k};rendre()">${esc(x.nom)}</span>`).join('');
   let n = 0, lies = 0, fcs = [];
-  for (const s of menu.sections) for (const it of s.items || []) for (const v of it.variantes || []) { n++; if (v.recette && REC(v.recette)) { lies++; const f = fcCarte(v.recette, v.prix).fc; if (f !== null) fcs.push(f); } }
+  for (const s of menu.sections) for (const it of s.items || []) for (const v of it.variantes || []) { n++; if (v.recette && REC(v.recette)) { lies++; const f = fcCarte(v.recette, v.prix, v.taille).fc; if (f !== null) fcs.push(f); } }
   const moy = fcs.length ? fcs.reduce((a, b) => a + b, 0) / fcs.length : null;
-  const opts = sel => '<option value="">— pas de fiche —</option>' + D.recettes.slice().sort((a, b) => a.nom.localeCompare(b.nom, 'fr')).map(r => `<option value="${r.id}" ${r.id === sel ? 'selected' : ''}>${esc(r.nom)}</option>`).join('');
+  const opts = (sel, tl) => '<option value="">— pas de fiche —</option>' + D.recettes.slice().sort((a, b) => a.nom.localeCompare(b.nom, 'fr')).map(r => { const T = taillesDe(r);
+    return T.length > 1 ? T.map(t => `<option value="${r.id}|${esc(t.nom)}" ${r.id === sel && (tl || T[0].nom) === t.nom ? 'selected' : ''}>${esc(r.nom)} — ${esc(t.nom)}</option>`).join('') : `<option value="${r.id}" ${r.id === sel ? 'selected' : ''}>${esc(r.nom)}</option>`; }).join('');
   const P_ = (s, i, v) => `${m},${s},${i}${v === undefined ? '' : ',' + v}`;
   const secs = menu.sections.map((s, si) => {
     const col = s.couleur || 'var(--vert)';
     const items = (s.items || []).map((it, ii) => {
       if (ed) return `<div class="ct-it"><div style="display:flex;gap:6px"><input value="${esc(it.nom)}" oninput="CARTE_B[${m}].sections[${si}].items[${ii}].nom=this.value" style="font-weight:600"><button class="lien" title="Supprimer" onclick="CARTE_B[${m}].sections[${si}].items.splice(${ii},1);rendre()">✕</button></div>
         <input value="${esc(it.desc || '')}" placeholder="description" oninput="CARTE_B[${m}].sections[${si}].items[${ii}].desc=this.value" class="petit" style="margin-top:4px">
-        ${(it.variantes || []).map((v, vi) => `<div style="display:flex;gap:6px;margin-top:4px;align-items:center"><input value="${esc(v.label || '')}" placeholder="taille" style="width:80px" oninput="CARTE_B[${m}].sections[${si}].items[${ii}].variantes[${vi}].label=this.value"><input type="number" value="${v.prix ?? ''}" placeholder="prix" style="width:80px" oninput="CARTE_B[${m}].sections[${si}].items[${ii}].variantes[${vi}].prix=this.value===''?null:Number(this.value)"><select style="flex:1;min-width:0" onchange="CARTE_B[${m}].sections[${si}].items[${ii}].variantes[${vi}].recette=this.value||null">${opts(v.recette)}</select><button class="lien" onclick="CARTE_B[${m}].sections[${si}].items[${ii}].variantes.splice(${vi},1);rendre()">✕</button></div>`).join('')}
+        ${(it.variantes || []).map((v, vi) => `<div style="display:flex;gap:6px;margin-top:4px;align-items:center"><input value="${esc(v.label || '')}" placeholder="taille" style="width:80px" oninput="CARTE_B[${m}].sections[${si}].items[${ii}].variantes[${vi}].label=this.value"><input type="number" value="${v.prix ?? ''}" placeholder="prix" style="width:80px" oninput="CARTE_B[${m}].sections[${si}].items[${ii}].variantes[${vi}].prix=this.value===''?null:Number(this.value)"><select style="flex:1;min-width:0" onchange="const z=this.value.split('|');Object.assign(CARTE_B[${m}].sections[${si}].items[${ii}].variantes[${vi}],{recette:z[0]||null,taille:z[1]||null})">${opts(v.recette, v.taille)}</select><button class="lien" onclick="CARTE_B[${m}].sections[${si}].items[${ii}].variantes.splice(${vi},1);rendre()">✕</button></div>`).join('')}
         <button class="lien petit" onclick="CARTE_B[${m}].sections[${si}].items[${ii}].variantes.push({label:'',prix:null,recette:null});rendre()">+ taille / prix</button></div>`;
       const prix = (it.variantes || []).map(v => `${v.label ? `<span class="petit">${esc(v.label)}</span> ` : ''}${F(v.prix)}`).join(' · ');
       const fiches = (it.variantes || []).map(v => {
         const r = v.recette && REC(v.recette), lab = v.label ? esc(v.label) + ' : ' : '';
         if (!r) return `<span class="pill p-g">${lab}pas de fiche</span>`;
-        const { c, fc } = fcCarte(r.id, v.prix);
-        return `<a href="#/r/${r.id}" class="ct-fi">${lab}${esc(r.nom)} · ${F(c && c.cp)}</a> ${fcPill(fc, r.cible || 0.3)}${Number(r.prixTTC) && Number(r.prixTTC) !== Number(v.prix) ? ` <span class="pill p-warn" title="prix sur la fiche">fiche ${F(r.prixTTC)}</span>` : ''}`;
+        const { c, fc } = fcCarte(r.id, v.prix, v.taille), T = taillesDe(r), tk = Math.max(0, T.findIndex(x => x.nom === v.taille)), tf = T[tk], pf = tf.prixTTC;
+        return `<a href="#/r/${r.id}" class="ct-fi" onclick="ETAT.taille=ETAT.taille||{};ETAT.taille['${r.id}']=taillesDe(REC('${r.id}'))[${tk}].nom">${lab}${esc(r.nom)}${T.length > 1 ? ' · ' + esc(tf.nom) : ''} · ${F(c && c.cp)}</a> ${fcPill(fc, r.cible || 0.3)}${Number(pf) && Number(pf) !== Number(v.prix) ? ` <span class="pill p-warn" title="prix sur la fiche">fiche ${F(pf)}</span>` : ''}`;
       }).join(' ');
-      return `<div class="ct-it"><div class="ct-l"><b style="color:${col}">${esc(it.nom)}</b><span class="ct-p" style="color:${col}">${prix}</span></div>${it.desc ? `<div class="petit ct-d">${esc(it.desc)}</div>` : ''}<div class="ct-f">${fiches}</div></div>`;
+      return `<div class="ct-it"><div class="ct-l"><b style="color:${col};cursor:pointer" title="${(it.variantes || []).some(v => v.recette && REC(v.recette)) ? 'Ouvrir la fiche' : 'Créer la fiche'}" onclick="ouvrirArticle(${m},${si},${ii})">${esc(it.nom)}</b><span class="ct-p" style="color:${col}">${prix}</span></div>${it.desc ? `<div class="petit ct-d">${esc(it.desc)}</div>` : ''}<div class="ct-f">${fiches}</div></div>`;
     }).join('');
     const note = ed ? `<textarea placeholder="Suppléments, remarques…" style="min-height:44px;margin-top:6px" oninput="CARTE_B[${m}].sections[${si}].note=this.value">${esc(s.note || '')}</textarea>`
       : (s.note ? `<div class="ct-n" style="color:${col}">${esc(s.note).replace(/\n/g, '<br>')}</div>` : '');
@@ -359,18 +370,34 @@ function pageCarte() {
   return `<div class="entete"><div><h1>Carte</h1><div class="petit">${lies} / ${n} prix reliés à une fiche${moy !== null ? ' · food cost moyen ' + P(moy, 1) : ''} — food cost calculé au prix de la carte</div></div><div class="actions">${actions}</div></div>
   <div class="chips">${chips}</div><div class="ct-grille">${secs}</div>`;
 }
+function ouvrirArticle(m, si, ii) {
+  const it = D.carte[m].sections[si].items[ii], v = (it.variantes || []).find(x => x.recette && REC(x.recette));
+  if (v) { ETAT.taille = ETAT.taille || {}; if (v.taille) ETAT.taille[v.recette] = v.taille; location.hash = '#/r/' + v.recette; return; }
+  const ex = D.recettes.find(r => norm(r.nom) === norm(it.nom));
+  ETAT.nouveauCarte = { m, si, ii, nom: ex ? it.nom + ' (' + D.carte[m].sections[si].titre + ')' : it.nom, dossier: D.carte[m].nom, prix: (it.variantes || [])[0] ? it.variantes[0].prix : null };
+  location.hash = '#/edit/nouvelle';
+}
+async function lierCarte(lien, id) {
+  const K = JSON.parse(JSON.stringify(D.carte)), it = K[lien.m] && K[lien.m].sections[lien.si] && K[lien.m].sections[lien.si].items[lien.ii]; if (!it) return;
+  (it.variantes || []).forEach(v => { if (!v.recette || !REC(v.recette)) v.recette = id; });
+  const res = await api('saveCarte', { carte: K }); D.carte = res.carte;
+}
 async function enregistrerCarte() {
   try { const res = await api('saveCarte', { carte: CARTE_B }); D.carte = res.carte; CARTE_B = null; rendre(); toast('Carte enregistrée'); } catch (e) { toast(e.message, 4000); }
 }
 async function reporterPrixCarte() {
   const maj = {};
   for (const mm of D.carte || []) for (const s of mm.sections) for (const it of s.items || []) for (const v of it.variantes || []) {
-    const r = v.recette && REC(v.recette); if (r && Number(v.prix) && Number(r.prixTTC) !== Number(v.prix)) maj[r.id] = Number(v.prix);
+    const r = v.recette && REC(v.recette); if (!r || !Number(v.prix)) continue;
+    const t = calcTaille(r, v.taille).t; if (Number(t ? t.prixTTC : r.prixTTC) === Number(v.prix)) continue;
+    (maj[r.id] = maj[r.id] || {})[t && !t.base ? t.nom : ''] = Number(v.prix);
   }
   const ids = Object.keys(maj); if (!ids.length) return toast('Les fiches ont déjà les prix de la carte');
-  if (!confirm(ids.length + ' fiche(s) vont prendre le prix de la carte :\n' + ids.map(id => REC(id).nom + ' → ' + maj[id] + ' F').join('\n'))) return;
+  if (!confirm(ids.length + ' fiche(s) vont prendre le prix de la carte :\n' + ids.map(id => Object.entries(maj[id]).map(([t, p]) => REC(id).nom + (t ? ' (' + t + ')' : '') + ' → ' + p + ' F').join('\n')).join('\n'))) return;
   try {
-    for (const id of ids) { const res = await api('saveRecette', { recette: Object.assign({}, REC(id), { prixTTC: maj[id] }) }); D.recettes[D.recettes.findIndex(x => x.id === id)] = res.recette; }
+    for (const id of ids) { const r0 = REC(id), n = Object.assign({}, r0, { tailles: (r0.tailles || []).map(t => t.nom in maj[id] ? Object.assign({}, t, { prixTTC: maj[id][t.nom] }) : t) });
+      if ('' in maj[id]) n.prixTTC = maj[id][''];
+      const res = await api('saveRecette', { recette: n }); D.recettes[D.recettes.findIndex(x => x.id === id)] = res.recette; }
     recalculer(); rendre(); toast(ids.length + ' prix mis à jour');
   } catch (e) { toast(e.message, 4000); }
 }
@@ -387,7 +414,7 @@ function pageRecettes() {
   const types = [['', 'Toutes'], ['vente', 'Vendues'], ['prep', 'Sauces / préparations'], ['ko', 'Au-dessus de la cible'], ['inc', 'À compléter']].map(([k, t]) => `<span class="chip ${ETAT.type === k ? 'on' : ''}" onclick="ETAT.type='${k}';rendre()">${t}</span>`).join('');
   const corps = Object.keys(g).sort((a, b) => a.localeCompare(b, 'fr')).map(d => `<div class="groupe">${esc(d)}</div><div class="carte" style="padding:6px 10px"><table>
     <tr>${thTri('rec', 'nom', 'Recette')}${thTri('rec', 'total', 'Coût total', 'n mc')}${thTri('rec', 'cp', 'Coût / portion', 'n')}${thTri('rec', 'cg', 'Coût / g', 'n mc')}${thTri('rec', 'prix', 'Prix TTC', 'n')}${thTri('rec', 'fc', 'Food cost', 'n')}</tr>
-    ${trier(g[d], tk, ts, getR).map(r => { const c = C[r.id] || {}; return `<tr class="clic" onclick="location.hash='#/r/${r.id}'"><td>${esc(r.nom)} ${r.famille ? `<span class="pill p-g">${versionsDe(r).length} versions</span>` : ''} ${r.ingredient ? '<span class="pill p-m">ingrédient</span>' : ''} ${c.manquants && c.manquants.length ? '<span class="pill p-warn">incomplet</span>' : ''}</td><td class="n mc">${F(c.total)}</td><td class="n">${F(c.cp)}</td><td class="n mc">${c.cg !== null ? nf(c.cg, 2) + ' F' : '–'}</td><td class="n">${Number(r.prixTTC) ? F(r.prixTTC) : '–'}</td><td class="n">${Number(r.prixTTC) ? fcPill(c.fc, c.cible) : ''}</td></tr>`; }).join('')}</table></div>`).join('');
+    ${trier(g[d], tk, ts, getR).map(r => { const c = C[r.id] || {}; return `<tr class="clic" onclick="location.hash='#/r/${r.id}'"><td>${esc(r.nom)} ${r.famille ? `<span class="pill p-g">${versionsDe(r).length} versions</span>` : ''}${r.tailles && r.tailles.length ? ` <span class="pill p-g">${r.tailles.length + 1} tailles</span>` : ''} ${r.ingredient ? '<span class="pill p-m">ingrédient</span>' : ''} ${c.manquants && c.manquants.length ? '<span class="pill p-warn">incomplet</span>' : ''}</td><td class="n mc">${F(c.total)}</td><td class="n">${F(c.cp)}</td><td class="n mc">${c.cg !== null ? nf(c.cg, 2) + ' F' : '–'}</td><td class="n">${Number(r.prixTTC) ? F(r.prixTTC) : '–'}</td><td class="n">${Number(r.prixTTC) ? fcPill(c.fc, c.cible) : ''}</td></tr>`; }).join('')}</table></div>`).join('');
   return `<div class="entete"><h1>Recettes</h1><div class="actions"><button onclick="location.hash='#/edit/nouvelle'">+ Nouvelle recette</button><button class="sec" onclick="exporterCSV()">Exporter (Excel)</button></div></div>
   <div class="outils"><input id="cherche" placeholder="Rechercher une recette…" value="${esc(ETAT.q)}" oninput="ETAT.q=this.value;ETAT.focus=true;rendre()"></div>
   <div class="chips">${types}</div><div class="chips">${chips}</div>${corps || '<div class="vide">Aucune recette.</div>'}`;
@@ -395,8 +422,12 @@ function pageRecettes() {
 
 // ------------------------------------------------------------------ fiche
 function pageFiche(id) {
-  const r = REC(id); if (!r) return '<div class="vide">Recette introuvable.</div>';
-  const c = C[r.id];
+  const r0 = REC(id); if (!r0) return '<div class="vide">Recette introuvable.</div>';
+  ETAT.taille = ETAT.taille || {};
+  const TT = taillesDe(r0), { t: tSel, c } = calcTaille(r0, ETAT.taille[r0.id]);
+  const r = Object.assign({}, r0, { prixTTC: tSel ? tSel.prixTTC : r0.prixTTC });
+  const blocTailles = TT.length > 1 ? `<div class="carte"><b>Tailles</b> <span class="petit">— quantités et coûts recalculés selon la taille choisie</span><div class="chips" style="margin:8px 0 4px">${TT.map((x, k) => `<span class="chip ${x.nom === tSel.nom ? 'on' : ''}" onclick="choisirTaille('${r0.id}',${k})">${esc(x.nom)}</span>`).join('')}</div>
+    <table><tr><th>Taille</th><th class="n">Coef.</th><th class="n">Coût / portion</th><th class="n">Prix TTC</th><th class="n">Food cost</th></tr>${TT.map(x => { const k = calcTaille(r0, x.nom).c; return `<tr${x.nom === tSel.nom ? ' style="font-weight:600"' : ''}><td>${esc(x.nom)}${x.base ? ' <span class="pill p-g">base</span>' : ''}</td><td class="n">×${nf(x.coef, 2)}</td><td class="n">${F(k.cp)}</td><td class="n">${Number(x.prixTTC) ? F(x.prixTTC) : '–'}</td><td class="n">${Number(x.prixTTC) ? fcPill(k.fc, k.cible) : ''}</td></tr>`; }).join('')}</table></div>` : '';
   const utilisee = r.ingredient ? D.recettes.filter(o => (o.lignes || []).some(l => l.t === 'r' && l.id === r.id)) : [];
   const etapes = String(r.etapes || '').split('\n').map(s => s.replace(/^\s*\d+[.)]\s*/, '').trim()).filter(Boolean);
   const lignes = c.lignes.map(l => {
@@ -404,8 +435,8 @@ function pageFiche(id) {
     const pu = l.pu === null ? '<span class="pill p-ko">sans prix</span>' : (l.unite === 'pièce' ? F(l.pu) + '/pièce' : nf(l.pu * 1000) + ' F/' + (l.unite === 'ml' ? 'L' : 'kg'));
     return `<tr><td>${lien}</td><td class="n">${l.qte === null ? '<span class="pill p-warn">?</span>' : nf(l.qte, 2) + ' ' + esc(l.unite)}</td><td class="n petit">${pu}</td><td class="n mc">${l.rend !== 1 ? P(l.rend) : ''}</td><td class="n mc">${l.brut !== null && l.rend !== 1 ? nf(l.brut, 1) : ''}</td><td class="n">${l.cout === null ? '–' : nf(l.cout, 1)}</td><td class="n petit mc">${l.cout && c.total ? P(l.cout / c.total) : ''}</td></tr>`;
   }).join('');
-  return `<div class="entete"><div><div class="petit"><a href="#/recettes">Recettes</a> › ${esc(r.dossier || 'Sans dossier')}</div><h1>${esc(r.nom)} ${r.ingredient ? '<span class="pill p-m">utilisable comme ingrédient</span>' : ''}</h1></div>
-  <div class="actions"><button onclick="location.hash='#/edit/${r.id}'">Modifier</button><button class="sec" onclick="location.hash='#/edit/nouvelle/${r.id}/v'">+ Nouvelle version</button><button class="sec" onclick="location.hash='#/edit/nouvelle/${r.id}'">Dupliquer</button><button class="sec" onclick="print()">Imprimer</button><button class="dang" onclick="supprimerRecette('${r.id}')">Supprimer</button></div></div>
+  return `<div class="entete"><div><div class="petit"><a href="#/recettes">Recettes</a> › ${esc(r.dossier || 'Sans dossier')}</div><h1>${esc(r.nom)}${TT.length > 1 ? ' <span class="petit">· ' + esc(tSel.nom) + '</span>' : ''} ${r.ingredient ? '<span class="pill p-m">utilisable comme ingrédient</span>' : ''}</h1></div>
+  <div class="actions"><button onclick="location.hash='#/edit/${r.id}'">Modifier</button><button class="sec" onclick="location.hash='#/edit/${r.id}/t'">+ Nouvelle taille</button><button class="sec" onclick="location.hash='#/edit/nouvelle/${r.id}/v'">+ Nouvelle version</button><button class="sec" onclick="location.hash='#/edit/nouvelle/${r.id}'">Dupliquer</button><button class="sec" onclick="print()">Imprimer</button><button class="dang" onclick="supprimerRecette('${r.id}')">Supprimer</button></div></div>
   <div class="grille kpis">
     <div class="kpi"><div class="v">${F(c.total)}</div><div class="l">coût total HT</div></div>
     <div class="kpi"><div class="v">${F(c.cp)}</div><div class="l">coût / portion (${nf(c.portions, 1)} portion${c.portions > 1 ? 's' : ''})</div></div>
@@ -414,6 +445,7 @@ function pageFiche(id) {
     <div class="kpi"><div class="v">${F(c.marge)}</div><div class="l">marge brute / portion HT (×${nf(c.coef, 2)})</div></div>` : ''}
     <div class="kpi"><div class="v violet">${c.cg !== null ? nf(c.cg, 3) + ' F' : '–'}</div><div class="l">coût HT / gramme${r.poidsFinal ? ' (poids final ' + nf(r.poidsFinal) + ' g)' : ' (poids net ' + nf(c.net) + ' g)'}</div></div>
   </div><div style="height:14px"></div>
+  ${blocTailles}
   ${r.famille ? `<div class="carte"><b>Versions de « ${esc(r.famille)} »</b> <span class="petit">— même recette, autres dosages ou ingrédients</span><div class="chips" style="margin:8px 0 0">${versionsDe(r).map(o => { const k = C[o.id] || {}; return `<span class="chip ${o.id === r.id ? 'on' : ''}" onclick="location.hash='#/r/${o.id}'">${esc(o.version || o.nom)} · ${F(k.cp)}${Number(o.prixTTC) && k.fc !== null ? ' · ' + P(k.fc, 0) : ''}</span>`; }).join('')}</div></div>` : ''}
   ${c.manquants.length ? `<div class="carte" style="background:var(--orangef)">⚠️ Coût incomplet : ${esc(c.manquants.join(', '))}</div>` : ''}
   <div class="carte"><h2>Ingrédients</h2><table><tr><th>Ingrédient</th><th class="n">Quantité nette</th><th class="n">Prix HT</th><th class="n mc">Rendement</th><th class="n mc">Qté brute</th><th class="n">Coût HT</th><th class="n mc">Part</th></tr>${lignes}
@@ -441,8 +473,9 @@ function pageEdition(id, depuis, enVersion) {
     const src = depuis ? REC(depuis) : null;
     BROUILLON = src ? JSON.parse(JSON.stringify(src)) : { nom: '', dossier: ETAT.dossier || '', ingredient: false, portions: 1, tgc: 0.06, cible: 0.3, lignes: [], etapes: '' };
     if (src) { delete BROUILLON.id; BROUILLON.nom = src.nom + ' (copie)'; }
+    else if (ETAT.nouveauCarte) { const n = ETAT.nouveauCarte; ETAT.nouveauCarte = null; Object.assign(BROUILLON, { nom: n.nom, dossier: n.dossier, prixTTC: n.prix ?? null, _carte: { m: n.m, si: n.si, ii: n.ii } }); }
     if (src && enVersion) { BROUILLON.famille = src.famille || src.nom; BROUILLON.version = 'V' + (versionsDe(src).length + (src.famille ? 1 : 2)); BROUILLON.nom = BROUILLON.famille + ' — ' + BROUILLON.version; BROUILLON._source = src.famille ? null : src.id; }
-  } else BROUILLON = JSON.parse(JSON.stringify(REC(id)));
+  } else { BROUILLON = JSON.parse(JSON.stringify(REC(id))); if (depuis === 't') { BROUILLON.tailles = BROUILLON.tailles || []; BROUILLON.tailles.push({ nom: '', coef: null, prixTTC: null }); } }
   const b = BROUILLON; if (!b.lignes.length) b.lignes.push({ t: 'i', id: '', qte: '' });
   const ch = choix();
   const dl = Object.keys(ch).sort((a, c) => a.localeCompare(c, 'fr')).map(n => `<option value="${esc(n)}">`).join('');
@@ -471,13 +504,32 @@ function pageEdition(id, depuis, enVersion) {
   <div style="overflow-x:auto"><table class="lignes" id="lignes"></table></div>
   <p><button class="sec" onclick="ajouterLigne()">+ Ajouter un ingrédient</button></p>
   <div class="petit">Rendement perso : pour forcer un rendement dans CETTE recette (0,6 = 60 %). Vide = celui de l'ingrédient.</div></div>
+  <div class="carte"><h2>Tailles <span class="petit">— la recette ci-dessus est la taille de base ; une autre taille multiplie toutes les quantités</span></h2>
+  <div class="grille form"><div><label>Nom de la taille de base</label><input data-k="tailleBase" value="${esc(b.tailleBase || '')}" placeholder="Normal, Grand, 360 ml…"></div></div>
+  <div id="tailles" style="margin-top:8px"></div><p><button class="sec" onclick="(BROUILLON.tailles=BROUILLON.tailles||[]).push({nom:'',coef:null,prixTTC:null});dessinerTailles()">+ Ajouter une taille</button></p>
+  <div class="petit">Coefficient : 0,5 = moitié des quantités, 1,8 = 80 % de plus. Par ex. 200 ml au lieu de 360 ml : 200 ÷ 360 = 0,56.</div></div>
   <div class="carte"><h2>Instructions de réalisation <span class="petit">— une étape par ligne</span></h2><textarea data-k="etapes" style="min-height:160px">${esc(Array.isArray(b.etapes) ? b.etapes.join('\n') : (b.etapes || ''))}</textarea></div>
   <div class="carte"><div class="grille form">${champ('conservation', 'Conservation / DLC')}${champ('allergenes', 'Allergènes')}<div style="grid-column:1/-1"><label>Dressage / notes</label><textarea data-k="notes" style="min-height:60px">${esc(b.notes || '')}</textarea></div></div></div>
   <div class="flottant"><div class="resume" id="resume"></div></div>`;
 }
+function dessinerTailles() {
+  const el = $('#tailles'); if (!el) return; const L = BROUILLON.tailles || [];
+  el.innerHTML = L.length ? '<table><tr><th>Taille</th><th class="n">Coefficient</th><th class="n">Prix TTC</th><th class="n">Coût / portion · food cost</th><th></th></tr>' + L.map((t, k) => `<tr><td><input value="${esc(t.nom || '')}" placeholder="Petit, Demi…" oninput="BROUILLON.tailles[${k}].nom=this.value"></td>
+    <td><input type="number" step="0.05" inputmode="decimal" style="width:90px" value="${t.coef ?? ''}" oninput="BROUILLON.tailles[${k}].coef=this.value===''?null:Number(this.value);majTailles()"></td>
+    <td><input type="number" inputmode="decimal" style="width:100px" value="${t.prixTTC ?? ''}" oninput="BROUILLON.tailles[${k}].prixTTC=this.value===''?null:Number(this.value);majTailles()"></td>
+    <td class="n" id="tc${k}"></td><td><button class="lien" onclick="BROUILLON.tailles.splice(${k},1);dessinerTailles()">✕</button></td></tr>`).join('') + '</table>' : '<div class="petit">Une seule taille.</div>';
+  majTailles();
+}
+function majTailles() {
+  const L = BROUILLON.tailles || []; if (!L.length) return;
+  const bid = BROUILLON.id || '_b';
+  const x = calculerTout(D.ingredients, D.recettes.filter(o => o.id !== BROUILLON.id).concat([Object.assign({}, BROUILLON, { id: bid })])).res[bid];
+  L.forEach((t, k) => { const e = $('#tc' + k); if (!e || !x) return; const cp = x.cp * (Number(t.coef) || 0), tgc = BROUILLON.tgc ?? 0.06;
+    e.innerHTML = t.coef ? F(cp) + (Number(t.prixTTC) ? ' · ' + P(cp / (Number(t.prixTTC) / (1 + tgc)), 1) : '') : '–'; });
+}
 function initEdition() {
   for (const el of document.querySelectorAll('[data-k]')) el.addEventListener('input', () => { lireChamps(); majResume(); });
-  dessinerLignes();
+  dessinerLignes(); dessinerTailles();
 }
 function lireChamps() {
   const b = BROUILLON;
@@ -530,13 +582,18 @@ async function enregistrer() {
   if (!String(b.nom || '').trim()) return toast('Donnez un nom à la recette');
   if (b.lignes.some(l => !l.id && l.nom)) return toast('Un ingrédient n\'est pas reconnu : choisissez-le dans la liste');
   const r = Object.assign({}, b, { lignes: b.lignes.filter(l => l.id) });
-  const source = r._source; delete r._source;
+  const source = r._source; delete r._source; const lienCarte = r._carte; delete r._carte;
+  r.tailles = (r.tailles || []).filter(t => String(t.nom || '').trim() && Number(t.coef) > 0).map(t => ({ nom: String(t.nom).trim(), coef: Number(t.coef), prixTTC: Number(t.prixTTC) || null }));
+  r.tailleBase = String(r.tailleBase || '').trim() || null;
+  const nomsT = [r.tailleBase || 'Normal', ...r.tailles.map(t => t.nom)];
+  if (new Set(nomsT).size !== nomsT.length) return toast('Deux tailles portent le même nom');
   r.famille = String(r.famille || '').trim() || null; r.version = r.famille ? (String(r.version || '').trim() || null) : null;
   try {
     const res = await api('saveRecette', { recette: r });
     if (source && r.famille) { const s0 = REC(source); if (s0 && !s0.famille) { const s1 = Object.assign({}, s0, { famille: r.famille, version: 'V1' }); const r1 = await api('saveRecette', { recette: s1 }); D.recettes[D.recettes.findIndex(x => x.id === source)] = r1.recette; } }
     const k = D.recettes.findIndex(x => x.id === res.recette.id);
     if (k < 0) D.recettes.push(res.recette); else D.recettes[k] = res.recette;
+    if (lienCarte) await lierCarte(lienCarte, res.recette.id);
     recalculer(); toast('Recette enregistrée'); location.hash = '#/r/' + res.recette.id;
   } catch (e) { toast(e.message, 4000); }
 }
