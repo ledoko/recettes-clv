@@ -199,6 +199,8 @@ function prixAff(i) { const pu = prixUnite(i); if (pu === null) return null; ret
 function fcPill(fc, cible) { if (fc === null || fc === undefined) return '<span class="pill p-g">non vendu</span>'; const c = fc > cible ? 'p-ko' : (fc > cible - 0.03 ? 'p-warn' : 'p-ok'); return `<span class="pill ${c}">${P(fc, 1)}</span>`; }
 function varPill(v) { if (v === null || v === undefined) return ''; if (Math.abs(v) < 0.005) return '<span class="pill p-g">=</span>'; return `<span class="pill ${v > 0 ? 'p-ko' : 'p-ok'}">${v > 0 ? '+' : '−'}${nf(Math.abs(v) * 100, 0)} %</span>`; }
 const vendues = () => D.recettes.filter(r => Number(r.prixTTC));
+const versionsDe = r => r && r.famille ? D.recettes.filter(o => o.famille && norm(o.famille) === norm(r.famille)).sort((a, b) => (a.version || a.nom).localeCompare(b.version || b.nom, 'fr', { numeric: true })) : [];
+const familles = () => [...new Set(D.recettes.map(r => r.famille).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'fr'));
 const dossiers = () => [...new Set(D.recettes.map(r => r.dossier || 'Sans dossier'))].sort((a, b) => a.localeCompare(b, 'fr'));
 
 // ------------------------------------------------------------------ rendu / navigation
@@ -221,7 +223,7 @@ function rendre() {
     if (base === '#/') html = pageDashboard();
     else if (base === '#/recettes') html = pageRecettes();
     else if (base === '#/r') html = pageFiche(decodeURIComponent(p[2]));
-    else if (base === '#/edit') html = pageEdition(decodeURIComponent(p[2] || 'nouvelle'), p[3]);
+    else if (base === '#/edit') html = pageEdition(decodeURIComponent(p[2] || 'nouvelle'), p[3], p[4] === 'v');
     else if (base === '#/ingredients') html = pageIngredients();
     else if (base === '#/alertes') html = pageAlertes();
     else if (base === '#/reglages') html = pageReglages();
@@ -307,16 +309,16 @@ function pageDashboard() {
 // ------------------------------------------------------------------ liste des recettes
 function pageRecettes() {
   const q = norm(ETAT.q);
-  let l = D.recettes.filter(r => (!q || norm(r.nom + ' ' + (r.dossier || '')).includes(q)) && (!ETAT.dossier || (r.dossier || 'Sans dossier') === ETAT.dossier)
+  let l = D.recettes.filter(r => (!q || norm(r.nom + ' ' + (r.dossier || '') + ' ' + (r.famille || '') + ' ' + (r.version || '')).includes(q)) && (!ETAT.dossier || (r.dossier || 'Sans dossier') === ETAT.dossier)
     && (!ETAT.type || (ETAT.type === 'prep' ? r.ingredient : (ETAT.type === 'vente' ? Number(r.prixTTC) : (ETAT.type === 'ko' ? (C[r.id] && C[r.id].fc > C[r.id].cible) : C[r.id] && C[r.id].manquants.length)))));
-  const getR = (r, k) => { const c = C[r.id] || {}; return k === 'nom' ? r.nom : k === 'total' ? c.total : k === 'cp' ? c.cp : k === 'cg' ? c.cg : k === 'prix' ? (Number(r.prixTTC) || null) : k === 'fc' ? (Number(r.prixTTC) ? c.fc : null) : null; };
+  const getR = (r, k) => { const c = C[r.id] || {}; return k === 'nom' ? (r.famille ? r.famille + ' ' + (r.version || r.nom) : r.nom) : k === 'total' ? c.total : k === 'cp' ? c.cp : k === 'cg' ? c.cg : k === 'prix' ? (Number(r.prixTTC) || null) : k === 'fc' ? (Number(r.prixTTC) ? c.fc : null) : null; };
   const tr = ETAT.tri.rec, tk = tr.k || 'nom', ts = tr.k ? tr.s : 1;
   const g = {}; for (const r of l) (g[r.dossier || 'Sans dossier'] = g[r.dossier || 'Sans dossier'] || []).push(r);
   const chips = ['', ...dossiers()].map(d => `<span class="chip ${ETAT.dossier === d ? 'on' : ''}" onclick="ETAT.dossier='${esc(d)}';rendre()">${d ? esc(d) : 'Tous'}</span>`).join('');
   const types = [['', 'Toutes'], ['vente', 'Vendues'], ['prep', 'Sauces / préparations'], ['ko', 'Au-dessus de la cible'], ['inc', 'À compléter']].map(([k, t]) => `<span class="chip ${ETAT.type === k ? 'on' : ''}" onclick="ETAT.type='${k}';rendre()">${t}</span>`).join('');
   const corps = Object.keys(g).sort((a, b) => a.localeCompare(b, 'fr')).map(d => `<div class="groupe">${esc(d)}</div><div class="carte" style="padding:6px 10px"><table>
     <tr>${thTri('rec', 'nom', 'Recette')}${thTri('rec', 'total', 'Coût total', 'n mc')}${thTri('rec', 'cp', 'Coût / portion', 'n')}${thTri('rec', 'cg', 'Coût / g', 'n mc')}${thTri('rec', 'prix', 'Prix TTC', 'n')}${thTri('rec', 'fc', 'Food cost', 'n')}</tr>
-    ${trier(g[d], tk, ts, getR).map(r => { const c = C[r.id] || {}; return `<tr class="clic" onclick="location.hash='#/r/${r.id}'"><td>${esc(r.nom)} ${r.ingredient ? '<span class="pill p-m">ingrédient</span>' : ''} ${c.manquants && c.manquants.length ? '<span class="pill p-warn">incomplet</span>' : ''}</td><td class="n mc">${F(c.total)}</td><td class="n">${F(c.cp)}</td><td class="n mc">${c.cg !== null ? nf(c.cg, 2) + ' F' : '–'}</td><td class="n">${Number(r.prixTTC) ? F(r.prixTTC) : '–'}</td><td class="n">${Number(r.prixTTC) ? fcPill(c.fc, c.cible) : ''}</td></tr>`; }).join('')}</table></div>`).join('');
+    ${trier(g[d], tk, ts, getR).map(r => { const c = C[r.id] || {}; return `<tr class="clic" onclick="location.hash='#/r/${r.id}'"><td>${esc(r.nom)} ${r.famille ? `<span class="pill p-g">${versionsDe(r).length} versions</span>` : ''} ${r.ingredient ? '<span class="pill p-m">ingrédient</span>' : ''} ${c.manquants && c.manquants.length ? '<span class="pill p-warn">incomplet</span>' : ''}</td><td class="n mc">${F(c.total)}</td><td class="n">${F(c.cp)}</td><td class="n mc">${c.cg !== null ? nf(c.cg, 2) + ' F' : '–'}</td><td class="n">${Number(r.prixTTC) ? F(r.prixTTC) : '–'}</td><td class="n">${Number(r.prixTTC) ? fcPill(c.fc, c.cible) : ''}</td></tr>`; }).join('')}</table></div>`).join('');
   return `<div class="entete"><h1>Recettes</h1><div class="actions"><button onclick="location.hash='#/edit/nouvelle'">+ Nouvelle recette</button><button class="sec" onclick="exporterCSV()">Exporter (Excel)</button></div></div>
   <div class="outils"><input id="cherche" placeholder="Rechercher une recette…" value="${esc(ETAT.q)}" oninput="ETAT.q=this.value;ETAT.focus=true;rendre()"></div>
   <div class="chips">${types}</div><div class="chips">${chips}</div>${corps || '<div class="vide">Aucune recette.</div>'}`;
@@ -334,7 +336,7 @@ function pageFiche(id) {
     return `<tr><td>${lien}</td><td class="n">${l.qte === null ? '<span class="pill p-warn">?</span>' : nf(l.qte, 2) + ' ' + esc(l.unite)}</td><td class="n petit">${pu}</td><td class="n mc">${l.rend !== 1 ? P(l.rend) : ''}</td><td class="n mc">${l.brut !== null && l.rend !== 1 ? nf(l.brut, 1) : ''}</td><td class="n">${l.cout === null ? '–' : nf(l.cout, 1)}</td><td class="n petit mc">${l.cout && c.total ? P(l.cout / c.total) : ''}</td></tr>`;
   }).join('');
   return `<div class="entete"><div><div class="petit"><a href="#/recettes">Recettes</a> › ${esc(r.dossier || 'Sans dossier')}</div><h1>${esc(r.nom)} ${r.ingredient ? '<span class="pill p-m">utilisable comme ingrédient</span>' : ''}</h1></div>
-  <div class="actions"><button onclick="location.hash='#/edit/${r.id}'">Modifier</button><button class="sec" onclick="location.hash='#/edit/nouvelle/${r.id}'">Dupliquer</button><button class="sec" onclick="print()">Imprimer</button><button class="dang" onclick="supprimerRecette('${r.id}')">Supprimer</button></div></div>
+  <div class="actions"><button onclick="location.hash='#/edit/${r.id}'">Modifier</button><button class="sec" onclick="location.hash='#/edit/nouvelle/${r.id}/v'">+ Nouvelle version</button><button class="sec" onclick="location.hash='#/edit/nouvelle/${r.id}'">Dupliquer</button><button class="sec" onclick="print()">Imprimer</button><button class="dang" onclick="supprimerRecette('${r.id}')">Supprimer</button></div></div>
   <div class="grille kpis">
     <div class="kpi"><div class="v">${F(c.total)}</div><div class="l">coût total HT</div></div>
     <div class="kpi"><div class="v">${F(c.cp)}</div><div class="l">coût / portion (${nf(c.portions, 1)} portion${c.portions > 1 ? 's' : ''})</div></div>
@@ -343,6 +345,7 @@ function pageFiche(id) {
     <div class="kpi"><div class="v">${F(c.marge)}</div><div class="l">marge brute / portion HT (×${nf(c.coef, 2)})</div></div>` : ''}
     <div class="kpi"><div class="v violet">${c.cg !== null ? nf(c.cg, 3) + ' F' : '–'}</div><div class="l">coût HT / gramme${r.poidsFinal ? ' (poids final ' + nf(r.poidsFinal) + ' g)' : ' (poids net ' + nf(c.net) + ' g)'}</div></div>
   </div><div style="height:14px"></div>
+  ${r.famille ? `<div class="carte"><b>Versions de « ${esc(r.famille)} »</b> <span class="petit">— même recette, autres dosages ou ingrédients</span><div class="chips" style="margin:8px 0 0">${versionsDe(r).map(o => { const k = C[o.id] || {}; return `<span class="chip ${o.id === r.id ? 'on' : ''}" onclick="location.hash='#/r/${o.id}'">${esc(o.version || o.nom)} · ${F(k.cp)}${Number(o.prixTTC) && k.fc !== null ? ' · ' + P(k.fc, 0) : ''}</span>`; }).join('')}</div></div>` : ''}
   ${c.manquants.length ? `<div class="carte" style="background:var(--orangef)">⚠️ Coût incomplet : ${esc(c.manquants.join(', '))}</div>` : ''}
   <div class="carte"><h2>Ingrédients</h2><table><tr><th>Ingrédient</th><th class="n">Quantité nette</th><th class="n">Prix HT</th><th class="n mc">Rendement</th><th class="n mc">Qté brute</th><th class="n">Coût HT</th><th class="n mc">Part</th></tr>${lignes}
   <tr><td><b>Total</b></td><td class="n"><b>${nf(c.net)}</b></td><td></td><td class="mc"></td><td class="mc"></td><td class="n"><b>${F(c.total)}</b></td><td class="mc"></td></tr></table></div>
@@ -364,23 +367,27 @@ function choix() { // nom affiché -> {t,id}
   return m;
 }
 function nomLigne(l) { if (!l.id) return l.nom || ''; const o = l.t === 'r' ? REC(l.id) : ING(l.id); return o ? o.nom : (l.nom || ''); }
-function pageEdition(id, depuis) {
+function pageEdition(id, depuis, enVersion) {
   if (id === 'nouvelle') {
     const src = depuis ? REC(depuis) : null;
     BROUILLON = src ? JSON.parse(JSON.stringify(src)) : { nom: '', dossier: ETAT.dossier || '', ingredient: false, portions: 1, tgc: 0.06, cible: 0.3, lignes: [], etapes: '' };
     if (src) { delete BROUILLON.id; BROUILLON.nom = src.nom + ' (copie)'; }
+    if (src && enVersion) { BROUILLON.famille = src.famille || src.nom; BROUILLON.version = 'V' + (versionsDe(src).length + (src.famille ? 1 : 2)); BROUILLON.nom = BROUILLON.famille + ' — ' + BROUILLON.version; BROUILLON._source = src.famille ? null : src.id; }
   } else BROUILLON = JSON.parse(JSON.stringify(REC(id)));
   const b = BROUILLON; if (!b.lignes.length) b.lignes.push({ t: 'i', id: '', qte: '' });
   const ch = choix();
   const dl = Object.keys(ch).sort((a, c) => a.localeCompare(c, 'fr')).map(n => `<option value="${esc(n)}">`).join('');
   const dd = dossiers().map(d => `<option value="${esc(d)}">`).join('');
+  const df = familles().map(d => `<option value="${esc(d)}">`).join('');
   const champ = (k, l, t = 'text', extra = '') => `<div><label>${l}</label><input data-k="${k}" type="${t}" value="${esc(b[k] ?? '')}" ${extra}></div>`;
   return `<div class="entete"><div><div class="petit"><a href="#/recettes">Recettes</a></div><h1>${b.id ? 'Modifier' : 'Nouvelle recette'}</h1></div>
   <div class="actions"><button onclick="enregistrer()">Enregistrer</button><button class="sec" onclick="history.back()">Annuler</button></div></div>
-  <datalist id="dl-ing">${dl}</datalist><datalist id="dl-dos">${dd}</datalist>
+  <datalist id="dl-ing">${dl}</datalist><datalist id="dl-dos">${dd}</datalist><datalist id="dl-fam">${df}</datalist>
   <div class="carte"><div class="grille form">
     <div style="grid-column:1/-1"><label>Nom de la recette</label><input data-k="nom" value="${esc(b.nom)}" style="font-size:18px;font-weight:600"></div>
     ${champ('dossier', 'Dossier / catégorie', 'text', 'list="dl-dos" placeholder="Sauces, Barista, Salé…"')}
+    ${champ('famille', 'Recette de base (pour regrouper les versions)', 'text', 'list="dl-fam" placeholder="vide = pas de versions"')}
+    ${champ('version', 'Nom de la version', 'text', 'placeholder="V1, Été 2025, sans gluten…"')}
     <div><label>Utiliser comme ingrédient (sauce, base…)</label><select data-k="ingredient"><option value="">Non</option><option value="1" ${b.ingredient ? 'selected' : ''}>Oui — au coût HT par gramme</option></select></div>
     ${champ('prixTTC', 'Prix de vente TTC (vide si pas vendu)', 'number', 'inputmode="decimal"')}
     <div><label>TGC</label><select data-k="tgc">${[0, 0.03, 0.06, 0.11, 0.22].map(t => `<option value="${t}" ${Number(b.tgc ?? 0.06) === t ? 'selected' : ''}>${t * 100} %</option>`).join('')}</select></div>
@@ -454,8 +461,11 @@ async function enregistrer() {
   if (!String(b.nom || '').trim()) return toast('Donnez un nom à la recette');
   if (b.lignes.some(l => !l.id && l.nom)) return toast('Un ingrédient n\'est pas reconnu : choisissez-le dans la liste');
   const r = Object.assign({}, b, { lignes: b.lignes.filter(l => l.id) });
+  const source = r._source; delete r._source;
+  r.famille = String(r.famille || '').trim() || null; r.version = r.famille ? (String(r.version || '').trim() || null) : null;
   try {
     const res = await api('saveRecette', { recette: r });
+    if (source && r.famille) { const s0 = REC(source); if (s0 && !s0.famille) { const s1 = Object.assign({}, s0, { famille: r.famille, version: 'V1' }); const r1 = await api('saveRecette', { recette: s1 }); D.recettes[D.recettes.findIndex(x => x.id === source)] = r1.recette; } }
     const k = D.recettes.findIndex(x => x.id === res.recette.id);
     if (k < 0) D.recettes.push(res.recette); else D.recettes[k] = res.recette;
     recalculer(); toast('Recette enregistrée'); location.hash = '#/r/' + res.recette.id;
