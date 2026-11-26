@@ -88,7 +88,7 @@ td.desig{font-family:Consolas,monospace;font-size:11.5px;color:#5c5a46;max-width
 .ct-sec{background:#fffdf7;border:3px solid;border-radius:16px;padding:12px 14px}
 .ct-sec h2{text-align:center;font-size:26px;letter-spacing:1px;margin:2px 0 8px;text-transform:uppercase}
 .ct-it{padding:7px 0;border-bottom:1px dashed #e3dccb}.ct-it:last-of-type{border-bottom:0}
-.ct-l{display:flex;justify-content:space-between;gap:10px;align-items:baseline}.ct-l b{font-size:16px}.ct-p{font-weight:700;white-space:nowrap}
+.ct-l{display:flex;justify-content:space-between;gap:10px;align-items:baseline}.ct-l b{font-size:16px}.ct-p{font-weight:700;white-space:nowrap}.ct-px{cursor:pointer;border-bottom:1px dashed transparent}.ct-px:hover{border-bottom-color:currentColor}
 .ct-d{font-style:italic;margin-top:1px}.ct-f{margin-top:4px;display:flex;flex-wrap:wrap;gap:4px;align-items:center;font-size:12.5px}
 .ct-fi{background:#f3efe4;border-radius:8px;padding:2px 7px}.ct-n{text-align:center;font-weight:600;font-size:12.5px;margin-top:8px;padding-top:6px;border-top:1px solid #e3dccb}
 @media print{.ct-f{display:none}}
@@ -350,7 +350,7 @@ function pageCarte() {
         <input value="${esc(it.desc || '')}" placeholder="description" oninput="CARTE_B[${m}].sections[${si}].items[${ii}].desc=this.value" class="petit" style="margin-top:4px">
         ${(it.variantes || []).map((v, vi) => `<div style="display:flex;gap:6px;margin-top:4px;align-items:center"><input value="${esc(v.label || '')}" placeholder="taille" style="width:80px" oninput="CARTE_B[${m}].sections[${si}].items[${ii}].variantes[${vi}].label=this.value"><input type="number" value="${v.prix ?? ''}" placeholder="prix" style="width:80px" oninput="CARTE_B[${m}].sections[${si}].items[${ii}].variantes[${vi}].prix=this.value===''?null:Number(this.value)"><select style="flex:1;min-width:0" onchange="const z=this.value.split('|');Object.assign(CARTE_B[${m}].sections[${si}].items[${ii}].variantes[${vi}],{recette:z[0]||null,taille:z[1]||null})">${opts(v.recette, v.taille)}</select><button class="lien" onclick="CARTE_B[${m}].sections[${si}].items[${ii}].variantes.splice(${vi},1);rendre()">✕</button></div>`).join('')}
         <button class="lien petit" onclick="CARTE_B[${m}].sections[${si}].items[${ii}].variantes.push({label:'',prix:null,recette:null});rendre()">+ taille / prix</button></div>`;
-      const prix = (it.variantes || []).map(v => `${v.label ? `<span class="petit">${esc(v.label)}</span> ` : ''}${F(v.prix)}`).join(' · ');
+      const prix = (it.variantes || []).map((v, vi) => `<span class="ct-px" title="Modifier le prix" onclick="changerPrixCarte(${m},${si},${ii},${vi})">${v.label ? `<span class="petit">${esc(v.label)}</span> ` : ''}${F(v.prix)}</span>`).join(' · ');
       const fiches = (it.variantes || []).map(v => {
         const r = v.recette && REC(v.recette), lab = v.label ? esc(v.label) + ' : ' : '';
         if (!r) return `<span class="pill p-g">${lab}pas de fiche</span>`;
@@ -381,6 +381,26 @@ async function lierCarte(lien, id) {
   const K = JSON.parse(JSON.stringify(D.carte)), it = K[lien.m] && K[lien.m].sections[lien.si] && K[lien.m].sections[lien.si].items[lien.ii]; if (!it) return;
   (it.variantes || []).forEach(v => { if (!v.recette || !REC(v.recette)) v.recette = id; });
   const res = await api('saveCarte', { carte: K }); D.carte = res.carte;
+}
+async function changerPrixCarte(m, si, ii, vi) {
+  const it = D.carte[m].sections[si].items[ii], v = it.variantes[vi];
+  const t = prompt('Nouveau prix TTC pour « ' + it.nom + (v.label ? ' — ' + v.label : '') + ' » (F) :', v.prix ?? '');
+  if (t === null) return;
+  const n = Number(String(t).replace(/\s/g, '').replace(',', '.'));
+  if (!(n > 0)) return toast('Prix invalide');
+  if (n === Number(v.prix)) return;
+  try {
+    const K = JSON.parse(JSON.stringify(D.carte)); K[m].sections[si].items[ii].variantes[vi].prix = n;
+    D.carte = (await api('saveCarte', { carte: K })).carte;
+    const r = v.recette && REC(v.recette); let fiche = '';
+    if (r) {
+      const tl = calcTaille(r, v.taille).t, x = JSON.parse(JSON.stringify(r));
+      if (!tl || tl.base) x.prixTTC = n; else x.tailles = (x.tailles || []).map(o => o.nom === tl.nom ? Object.assign(o, { prixTTC: n }) : o);
+      const res = await api('saveRecette', { recette: x }); D.recettes[D.recettes.findIndex(o => o.id === r.id)] = res.recette; recalculer();
+      fiche = ' et sur la fiche';
+    }
+    rendre(); toast('Prix modifié sur la carte' + fiche + ' — pensez à Canva', 4000);
+  } catch (e) { toast(e.message, 4000); }
 }
 async function enregistrerCarte() {
   try { const res = await api('saveCarte', { carte: CARTE_B }); D.carte = res.carte; CARTE_B = null; rendre(); toast('Carte enregistrée'); } catch (e) { toast(e.message, 4000); }
