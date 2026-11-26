@@ -209,13 +209,16 @@ function varPill(v) { if (v === null || v === undefined) return ''; if (Math.abs
 const vendues = () => D.recettes.filter(r => Number(r.prixTTC));
 const versionsDe = r => r && r.famille ? D.recettes.filter(o => o.famille && norm(o.famille) === norm(r.famille)).sort((a, b) => (a.version || a.nom).localeCompare(b.version || b.nom, 'fr', { numeric: true })) : [];
 // tailles : la recette telle que saisie = taille de base (coef 1) ; chaque autre taille multiplie toutes les quantités
-const taillesDe = r => r ? [{ nom: r.tailleBase || 'Normal', coef: 1, prixTTC: r.prixTTC ?? null, base: true }, ...(r.tailles || [])] : [];
+// volume (ml) ou poids (g) d'une portion de base : « poids d'une portion » s'il est saisi, sinon total ÷ portions
+const volPortion = (r, c) => Number(r.poidsPortion) || (c && c.portions ? c.poids / c.portions : null);
+const coefTaille = (t, v0) => Number(t.volume) && v0 ? Number(t.volume) / v0 : (Number(t.coef) || 1);
+const taillesDe = r => r ? [{ nom: r.tailleBase || 'Normal', coef: 1, volume: volPortion(r, C[r.id]), prixTTC: r.prixTTC ?? null, base: true }, ...(r.tailles || [])] : [];
 function calcTaille(r, nomT) {
   const c = C[r.id]; if (!c) return { c, t: null };
-  const T = taillesDe(r), t = T.find(x => x.nom === nomT) || T[0], k = Number(t.coef) || 1;
+  const T = taillesDe(r), t = T.find(x => x.nom === nomT) || T[0], v0 = volPortion(r, c), k = t.base ? 1 : coefTaille(t, v0);
   const tgc = (r.tgc === null || r.tgc === undefined || r.tgc === '') ? 0.06 : Number(r.tgc), ht = Number(t.prixTTC) ? Number(t.prixTTC) / (1 + tgc) : null, cp = c.cp * k;
   return { t, c: Object.assign({}, c, { total: c.total * k, net: c.net * k, poids: c.poids * k, cp, ht, fc: ht ? cp / ht : null, marge: ht ? ht - cp : null,
-    coef: ht && cp ? ht / cp : null, conseil: cp / c.cible * (1 + tgc), lignes: c.lignes.map(l => Object.assign({}, l, { qte: l.qte === null ? null : l.qte * k, brut: l.brut === null ? null : l.brut * k, cout: l.cout === null ? null : l.cout * k })) }) };
+    coef: ht && cp ? ht / cp : null, conseil: cp / c.cible * (1 + tgc), vol: v0 ? v0 * k : null, k, lignes: c.lignes.map(l => Object.assign({}, l, { qte: l.qte === null ? null : l.qte * k, brut: l.brut === null ? null : l.brut * k, cout: l.cout === null ? null : l.cout * k })) }) };
 }
 function choisirTaille(id, k) { ETAT.taille = ETAT.taille || {}; ETAT.taille[id] = taillesDe(REC(id))[k].nom; rendre(); }
 const familles = () => [...new Set(D.recettes.map(r => r.famille).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'fr'));
@@ -447,7 +450,7 @@ function pageFiche(id) {
   const TT = taillesDe(r0), { t: tSel, c } = calcTaille(r0, ETAT.taille[r0.id]);
   const r = Object.assign({}, r0, { prixTTC: tSel ? tSel.prixTTC : r0.prixTTC });
   const blocTailles = TT.length > 1 ? `<div class="carte"><b>Tailles</b> <span class="petit">— quantités et coûts recalculés selon la taille choisie</span><div class="chips" style="margin:8px 0 4px">${TT.map((x, k) => `<span class="chip ${x.nom === tSel.nom ? 'on' : ''}" onclick="choisirTaille('${r0.id}',${k})">${esc(x.nom)}</span>`).join('')}</div>
-    <table><tr><th>Taille</th><th class="n">Coef.</th><th class="n">Coût / portion</th><th class="n">Prix TTC</th><th class="n">Food cost</th></tr>${TT.map(x => { const k = calcTaille(r0, x.nom).c; return `<tr${x.nom === tSel.nom ? ' style="font-weight:600"' : ''}><td>${esc(x.nom)}${x.base ? ' <span class="pill p-g">base</span>' : ''}</td><td class="n">×${nf(x.coef, 2)}</td><td class="n">${F(k.cp)}</td><td class="n">${Number(x.prixTTC) ? F(x.prixTTC) : '–'}</td><td class="n">${Number(x.prixTTC) ? fcPill(k.fc, k.cible) : ''}</td></tr>`; }).join('')}</table></div>` : '';
+    <table><tr><th>Taille</th><th class="n">Volume / poids</th><th class="n">Coef.</th><th class="n">Coût / portion</th><th class="n">Prix TTC</th><th class="n">Food cost</th></tr>${TT.map(x => { const k = calcTaille(r0, x.nom).c; return `<tr${x.nom === tSel.nom ? ' style="font-weight:600"' : ''}><td>${esc(x.nom)}${x.base ? ' <span class="pill p-g">base</span>' : ''}</td><td class="n">${k.vol ? nf(k.vol) : '–'}</td><td class="n">×${nf(k.k, 2)}</td><td class="n">${F(k.cp)}</td><td class="n">${Number(x.prixTTC) ? F(x.prixTTC) : '–'}</td><td class="n">${Number(x.prixTTC) ? fcPill(k.fc, k.cible) : ''}</td></tr>`; }).join('')}</table></div>` : '';
   const utilisee = r.ingredient ? D.recettes.filter(o => (o.lignes || []).some(l => l.t === 'r' && l.id === r.id)) : [];
   const etapes = String(r.etapes || '').split('\n').map(s => s.replace(/^\s*\d+[.)]\s*/, '').trim()).filter(Boolean);
   const lignes = c.lignes.map(l => {
@@ -463,6 +466,7 @@ function pageFiche(id) {
     ${Number(r.prixTTC) ? `<div class="kpi ${c.fc > c.cible ? 'rouge' : ''}"><div class="v">${P(c.fc, 1)}</div><div class="l">food cost (cible ${P(c.cible)}) · prix ${F(r.prixTTC)} TTC</div></div>
     <div class="kpi"><div class="v">${F(c.conseil)}</div><div class="l">prix TTC conseillé pour la cible</div></div>
     <div class="kpi"><div class="v">${F(c.marge)}</div><div class="l">marge brute / portion HT (×${nf(c.coef, 2)})</div></div>` : ''}
+    <div class="kpi"><div class="v">${nf(c.poids)}</div><div class="l">volume / poids total (ml ou g)${c.vol ? ' · ' + nf(c.vol) + ' par portion' : ''}</div></div>
     <div class="kpi"><div class="v violet">${c.cg !== null ? nf(c.cg, 3) + ' F' : '–'}</div><div class="l">coût HT / gramme${r.poidsFinal ? ' (poids final ' + nf(r.poidsFinal) + ' g)' : ' (poids net ' + nf(c.net) + ' g)'}</div></div>
   </div><div style="height:14px"></div>
   ${blocTailles}
@@ -471,7 +475,7 @@ function pageFiche(id) {
   <div class="carte"><h2>Ingrédients</h2><table><tr><th>Ingrédient</th><th class="n">Quantité nette</th><th class="n">Prix HT</th><th class="n mc">Rendement</th><th class="n mc">Qté brute</th><th class="n">Coût HT</th><th class="n mc">Part</th></tr>${lignes}
   <tr><td><b>Total</b></td><td class="n"><b>${nf(c.net)}</b></td><td></td><td class="mc"></td><td class="mc"></td><td class="n"><b>${F(c.total)}</b></td><td class="mc"></td></tr></table></div>
   <div class="grille deux"><div class="carte"><h2>Réalisation</h2>${etapes.length ? etapes.map((e, i) => `<div class="etape"><b>${i + 1}</b><div>${esc(e)}</div></div>`).join('') : '<div class="vide">Pas encore d\'instructions.</div>'}</div>
-  <div class="carte"><h2>Infos</h2><table>${[['Temps de prépa', r.prepa], ['Cuisson', r.cuisson], ['Poids d\'une portion', r.poidsPortion ? nf(r.poidsPortion) + ' g' : ''], ['TGC', r.tgc !== undefined && r.tgc !== null ? P(r.tgc) : ''], ['Conservation / DLC', r.conservation], ['Allergènes', r.allergenes], ['Dressage / notes', r.notes], ['Modifiée le', r.maj]].filter(x => x[1]).map(x => `<tr><td class="petit">${x[0]}</td><td>${esc(x[1])}</td></tr>`).join('')}</table>
+  <div class="carte"><h2>Infos</h2><table>${[['Temps de prépa', r.prepa], ['Cuisson', r.cuisson], ['Poids / volume d\'une portion', r.poidsPortion ? nf(r.poidsPortion) : ''], ['TGC', r.tgc !== undefined && r.tgc !== null ? P(r.tgc) : ''], ['Conservation / DLC', r.conservation], ['Allergènes', r.allergenes], ['Dressage / notes', r.notes], ['Modifiée le', r.maj]].filter(x => x[1]).map(x => `<tr><td class="petit">${x[0]}</td><td>${esc(x[1])}</td></tr>`).join('')}</table>
   ${utilisee.length ? `<h2 style="margin-top:14px">Utilisée dans</h2>${utilisee.map(o => `<a href="#/r/${o.id}">${esc(o.nom)}</a>`).join(' · ')}` : ''}</div></div>`;
 }
 async function supprimerRecette(id) {
@@ -516,7 +520,7 @@ function pageEdition(id, depuis, enVersion) {
     <div><label>Food cost cible</label><input data-k="cibleP" type="number" value="${Math.round((b.cible || 0.3) * 100)}" inputmode="decimal"></div>
     <div><label>Portions</label><select data-k="portionsAuto"><option value="">Nombre fixe</option><option value="1" ${b.portionsAuto ? 'selected' : ''}>Calculé : poids ÷ poids d'une portion</option></select></div>
     ${champ('portions', 'Nombre de portions', 'number', 'inputmode="decimal"')}
-    ${champ('poidsPortion', 'Poids d\'une portion (g)', 'number', 'inputmode="decimal"')}
+    ${champ('poidsPortion', 'Poids / volume d\'une portion (g ou ml)', 'number', 'inputmode="decimal"')}
     ${champ('poidsFinal', 'Poids final après cuisson (g, facultatif)', 'number', 'inputmode="decimal"')}
     ${champ('prepa', 'Temps de prépa')}${champ('cuisson', 'Cuisson (temps / T°)')}
   </div></div>
@@ -524,31 +528,35 @@ function pageEdition(id, depuis, enVersion) {
   <div style="overflow-x:auto"><table class="lignes" id="lignes"></table></div>
   <p><button class="sec" onclick="ajouterLigne()">+ Ajouter un ingrédient</button></p>
   <div class="petit">Rendement perso : pour forcer un rendement dans CETTE recette (0,6 = 60 %). Vide = celui de l'ingrédient.</div></div>
-  <div class="carte"><h2>Tailles <span class="petit">— la recette ci-dessus est la taille de base ; une autre taille multiplie toutes les quantités</span></h2>
+  <div class="carte"><h2>Tailles <span class="petit">— la recette ci-dessus est la taille de base ; indiquez le volume (ml) ou le poids (g) des autres tailles, les quantités suivent</span></h2>
   <div class="grille form"><div><label>Nom de la taille de base</label><input data-k="tailleBase" value="${esc(b.tailleBase || '')}" placeholder="Normal, Grand, 360 ml…"></div></div>
   <div id="tailles" style="margin-top:8px"></div><p><button class="sec" onclick="(BROUILLON.tailles=BROUILLON.tailles||[]).push({nom:'',coef:null,prixTTC:null});dessinerTailles()">+ Ajouter une taille</button></p>
-  <div class="petit">Coefficient : 0,5 = moitié des quantités, 1,8 = 80 % de plus. Par ex. 200 ml au lieu de 360 ml : 200 ÷ 360 = 0,56.</div></div>
+  <div class="petit" id="tbase"></div><div class="petit">Le volume d'une portion de base vient du champ « Poids / volume d'une portion » ; s'il est vide : volume total ÷ portions. Sans volume (ex. demi sandwich), mettez un coefficient (0,5).</div></div>
   <div class="carte"><h2>Instructions de réalisation <span class="petit">— une étape par ligne</span></h2><textarea data-k="etapes" style="min-height:160px">${esc(Array.isArray(b.etapes) ? b.etapes.join('\n') : (b.etapes || ''))}</textarea></div>
   <div class="carte"><div class="grille form">${champ('conservation', 'Conservation / DLC')}${champ('allergenes', 'Allergènes')}<div style="grid-column:1/-1"><label>Dressage / notes</label><textarea data-k="notes" style="min-height:60px">${esc(b.notes || '')}</textarea></div></div></div>
   <div class="flottant"><div class="resume" id="resume"></div></div>`;
 }
 function dessinerTailles() {
   const el = $('#tailles'); if (!el) return; const L = BROUILLON.tailles || [];
-  el.innerHTML = L.length ? '<table><tr><th>Taille</th><th class="n">Coefficient</th><th class="n">Prix TTC</th><th class="n">Coût / portion · food cost</th><th></th></tr>' + L.map((t, k) => `<tr><td><input value="${esc(t.nom || '')}" placeholder="Petit, Demi…" oninput="BROUILLON.tailles[${k}].nom=this.value"></td>
-    <td><input type="number" step="0.05" inputmode="decimal" style="width:90px" value="${t.coef ?? ''}" oninput="BROUILLON.tailles[${k}].coef=this.value===''?null:Number(this.value);majTailles()"></td>
+  el.innerHTML = L.length ? '<table><tr><th>Taille</th><th class="n">Volume (ml / g)</th><th class="n">ou coef.</th><th class="n">Prix TTC</th><th class="n">Coût / portion · food cost</th><th></th></tr>' + L.map((t, k) => `<tr><td><input value="${esc(t.nom || '')}" placeholder="Petit, Demi…" oninput="BROUILLON.tailles[${k}].nom=this.value"></td>
+    <td><input type="number" inputmode="decimal" style="width:90px" value="${t.volume ?? ''}" oninput="BROUILLON.tailles[${k}].volume=this.value===''?null:Number(this.value);majTailles()"></td>
+    <td><input type="number" step="0.05" inputmode="decimal" style="width:80px" id="tk${k}" value="${t.volume ? '' : (t.coef ?? '')}" oninput="BROUILLON.tailles[${k}].coef=this.value===''?null:Number(this.value);majTailles()"></td>
     <td><input type="number" inputmode="decimal" style="width:100px" value="${t.prixTTC ?? ''}" oninput="BROUILLON.tailles[${k}].prixTTC=this.value===''?null:Number(this.value);majTailles()"></td>
     <td class="n" id="tc${k}"></td><td><button class="lien" onclick="BROUILLON.tailles.splice(${k},1);dessinerTailles()">✕</button></td></tr>`).join('') + '</table>' : '<div class="petit">Une seule taille.</div>';
   majTailles();
 }
 function majTailles() {
-  const L = BROUILLON.tailles || []; if (!L.length) return;
+  const L = BROUILLON.tailles || [];
   const bid = BROUILLON.id || '_b';
   const x = calculerTout(D.ingredients, D.recettes.filter(o => o.id !== BROUILLON.id).concat([Object.assign({}, BROUILLON, { id: bid })])).res[bid];
-  L.forEach((t, k) => { const e = $('#tc' + k); if (!e || !x) return; const cp = x.cp * (Number(t.coef) || 0), tgc = BROUILLON.tgc ?? 0.06;
-    e.innerHTML = t.coef ? F(cp) + (Number(t.prixTTC) ? ' · ' + P(cp / (Number(t.prixTTC) / (1 + tgc)), 1) : '') : '–'; });
+  const v0 = x ? volPortion(BROUILLON, x) : null, eb = $('#tbase');
+  if (eb) eb.innerHTML = x ? `Taille de base : <b>${v0 ? nf(v0) + ' ml / g par portion' : '?'}</b> · volume / poids total de la recette : <b>${nf(x.poids)}</b>` : '';
+  L.forEach((t, k) => { const e = $('#tc' + k); if (!e || !x) return; const ok = Number(t.volume) || Number(t.coef), kk = coefTaille(t, v0), cp = x.cp * kk, tgc = BROUILLON.tgc ?? 0.06;
+    const ek = $('#tk' + k); if (ek && Number(t.volume)) ek.placeholder = '×' + nf(kk, 2);
+    e.innerHTML = ok ? '×' + nf(kk, 2) + ' · ' + F(cp) + (Number(t.prixTTC) ? ' · ' + P(cp / (Number(t.prixTTC) / (1 + tgc)), 1) : '') : '–'; });
 }
 function initEdition() {
-  for (const el of document.querySelectorAll('[data-k]')) el.addEventListener('input', () => { lireChamps(); majResume(); });
+  for (const el of document.querySelectorAll('[data-k]')) el.addEventListener('input', () => { lireChamps(); majResume(); majTailles(); });
   dessinerLignes(); dessinerTailles();
 }
 function lireChamps() {
@@ -593,7 +601,7 @@ function majResume() {
     set('p', x ? (x.pu === null ? '<span class="pill p-ko">sans prix</span>' : (x.unite === 'pièce' ? nf(x.pu, 1) + '/pc' : nf(x.pu * 1000) + '/' + (x.unite === 'ml' ? 'L' : 'kg'))) : '');
     set('rb', x ? P(x.rendBase) : ''); set('c', x && x.cout !== null ? nf(x.cout, 1) : '');
   });
-  $('#resume').innerHTML = `<div>Coût total<b>${F(c.total)}</b></div><div>Par portion<b>${F(c.cp)}</b></div><div>Coût / g<b>${c.cg !== null ? nf(c.cg, 3) + ' F' : '–'}</b></div>` +
+  $('#resume').innerHTML = `<div>Coût total<b>${F(c.total)}</b></div><div>Par portion<b>${F(c.cp)}</b></div><div>Coût / g<b>${c.cg !== null ? nf(c.cg, 3) + ' F' : '–'}</b></div><div>Total ml / g<b>${nf(c.poids)}</b></div><div>ml / g par portion<b>${volPortion(b, c) ? nf(volPortion(b, c)) : '–'}</b></div>` +
     (Number(b.prixTTC) ? `<div>Food cost<b>${P(c.fc, 1)}</b></div>` : '') + `<div>Prix TTC conseillé<b>${F(c.conseil)}</b></div>` + (c.manquants.length ? `<div>⚠️ incomplet<b>${c.manquants.length}</b></div>` : '');
 }
 async function enregistrer() {
@@ -603,7 +611,7 @@ async function enregistrer() {
   if (b.lignes.some(l => !l.id && l.nom)) return toast('Un ingrédient n\'est pas reconnu : choisissez-le dans la liste');
   const r = Object.assign({}, b, { lignes: b.lignes.filter(l => l.id) });
   const source = r._source; delete r._source; const lienCarte = r._carte; delete r._carte;
-  r.tailles = (r.tailles || []).filter(t => String(t.nom || '').trim() && Number(t.coef) > 0).map(t => ({ nom: String(t.nom).trim(), coef: Number(t.coef), prixTTC: Number(t.prixTTC) || null }));
+  r.tailles = (r.tailles || []).filter(t => String(t.nom || '').trim() && (Number(t.volume) > 0 || Number(t.coef) > 0)).map(t => ({ nom: String(t.nom).trim(), volume: Number(t.volume) || null, coef: Number(t.volume) ? null : Number(t.coef), prixTTC: Number(t.prixTTC) || null }));
   r.tailleBase = String(r.tailleBase || '').trim() || null;
   const nomsT = [r.tailleBase || 'Normal', ...r.tailles.map(t => t.nom)];
   if (new Set(nomsT).size !== nomsT.length) return toast('Deux tailles portent le même nom');
